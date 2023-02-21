@@ -1,0 +1,43 @@
+{
+    "server": {
+        "address": ":9090"
+    },
+    "router":  {
+        "type":"mux",
+        "options":{}
+    },  
+    "cache":  {
+        "type":"redis",  
+        "options":{
+            "redis":{
+                "network": "tcp",
+                "host": "127.0.0.1",
+                "port": "6364",
+                "username": "",
+                "password": "",
+                "db": 1,
+                "maxRetries": 3,
+                "poolSize": 10,
+                "minIdleConns": 5
+            },
+            "filesystem":{
+                "opt1": "val1",
+                "opt2": "val2",
+                "opt3": "val3"
+            }
+        }
+    },
+    "database": {
+        "host": "localhost",
+        "port": "5432",
+        "username": "admin",
+        "password": "",
+        "dbname": ""
+    },
+    "general_settings":{
+        "start-time":"09:00",
+        "end-time":"12:30"
+    }
+ 
+}
+
