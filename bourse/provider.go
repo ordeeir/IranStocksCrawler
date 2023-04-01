@@ -753,11 +753,24 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 	// 	"Last3MonthAverageVolume": "5",
 	// }
 
+	i := 0
+
 	for _, _row := range records {
+		logrus.Debug("11111: " + _row)
+
+		i++
+		if i > 5 {
+			continue
+
+		}
 
 		row := strings.Split(_row, ",")
 
 		sar := &StockAverages{}
+
+		logrus.Debug("row[0]: " + row[0])
+		logrus.Debug("row[1]: " + row[1])
+		logrus.Debug("row[2]: " + row[2])
 
 		if len(row) == 3 {
 
