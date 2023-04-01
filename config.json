@@ -37,7 +37,7 @@
     "general_settings":{
         "start-time":"09:00",
         "end-time":"12:30",
-        "curl-agent":"https://destinia.ir/includes/curl.php?u={BASE64_URL}&gzdecode=1"
+        "curl-agent":"https://pay.destinia.ir/includes/curl.php?u={BASE64_URL}&gzdecode=1"
     }
  
 }
