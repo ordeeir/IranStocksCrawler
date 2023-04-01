@@ -756,7 +756,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 	i := 0
 
 	for _, _row := range records {
-		logrus.Debug("11111: " + _row)
+		//logrus.Debug("11111: " + _row)
 
 		i++
 		if i > 5 {
@@ -767,10 +767,6 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 		row := strings.Split(_row, ",")
 
 		sar := &StockAverages{}
-
-		logrus.Debug("row[0]: " + row[0])
-		logrus.Debug("row[1]: " + row[1])
-		logrus.Debug("row[2]: " + row[2])
 
 		if len(row) == 3 {
 
@@ -797,7 +793,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 			}
 		}
 
-		logrus.Debug("11111 " + sar.TSE_Code)
+		//logrus.Debug("11111 " + sar.TSE_Code)
 
 		// reject unnecessary rows
 		_, isExist := stockTseTOSymbolList[sar.TSE_Code]
@@ -805,7 +801,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 			continue
 		}
 
-		logrus.Debug("22222 " + sar.Symbol)
+		//logrus.Debug("22222 " + sar.Symbol)
 
 		sar.Symbol = stockTseTOSymbolList[sar.TSE_Code]
 
