@@ -744,32 +744,55 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 
 	records := strings.Split(currentPeriodicAveragesContent, ";")
 
-	//logrus.Debugf("currentPeriodicAveragesContent has %v length, records have %v rows", len(currentPeriodicAveragesContent), len(records))
+	logrus.Debugf("currentPeriodicAveragesContent has %v length, records have %v rows", len(currentPeriodicAveragesContent), len(records))
 
 	stockPeriodicAveragesList = map[string]*StockAverages{}
 
-	var colsNumber = map[string]int{
-		"TSE_Code":                0,
-		"Last3MonthAverageAmount": 1,
-		"Last3MonthAverageVolume": 5,
-	}
+	// var colsNumber = map[string]string{
+	// 	"Last3MonthAverageAmount": "1",
+	// 	"Last3MonthAverageVolume": "5",
+	// }
 
 	for _, _row := range records {
+
 		row := strings.Split(_row, ",")
 
-		sar := &StockAverages{
-			TSE_Code:                row[colsNumber["TSE_Code"]],
-			Last3MonthAverageAmount: toInt(row[colsNumber["Last3MonthAverageAmount"]]),
-			Last3MonthAverageVolume: toInt(row[colsNumber["Last3MonthAverageVolume"]]),
+		sar := &StockAverages{}
+
+		if len(row) == 3 {
+
+			sar.TSE_Code = row[0]
+
+			if row[1] == "1" {
+
+				sar.Last3MonthAverageAmount = toInt(row[2])
+
+			} else if row[1] == "5" {
+
+				sar.Last3MonthAverageVolume = toInt(row[2])
+			}
+
+		} else if len(row) == 2 {
+
+			if row[0] == "1" {
+
+				sar.Last3MonthAverageAmount = toInt(row[1])
+
+			} else if row[0] == "5" {
+
+				sar.Last3MonthAverageVolume = toInt(row[1])
+			}
 		}
 
-		logrus.Debug("11111 " + sar.TSE_Code)
+		//logrus.Debug("11111 " + sar.TSE_Code)
+
 		// reject unnecessary rows
 		_, isExist := stockTseTOSymbolList[sar.TSE_Code]
 		if isExist == false {
 			continue
 		}
-		logrus.Debug("22222 " + sar.Symbol)
+
+		//logrus.Debug("22222 " + sar.Symbol)
 
 		sar.Symbol = stockTseTOSymbolList[sar.TSE_Code]
 

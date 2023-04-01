@@ -158,7 +158,7 @@ func main() {
 
 				err := bourse.UpdatePeriodicAverages(storage)
 				if err {
-					tickPeriodicAvgs = time.NewTicker(time.Second * 5)
+					tickPeriodicAvgs = time.NewTicker(time.Second * 20)
 				} else {
 					tickPeriodicAvgs = time.NewTicker(tickPeriodicAvgsInterval)
 				}
