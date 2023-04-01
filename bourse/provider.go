@@ -743,6 +743,8 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 
 	records := strings.Split(currentPeriodicAveragesContent, ";")
 
+	logrus.Debugf("currentPeriodicAveragesContent has %v length, records have %v rows", len(currentPeriodicAveragesContent), len(records))
+
 	stockPeriodicAveragesList = map[string]*StockAverages{}
 
 	var colsNumber = map[string]int{
