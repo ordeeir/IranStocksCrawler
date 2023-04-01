@@ -3,6 +3,7 @@ package bourse
 import (
 	"IranStocksCrawler/helpers/stringsh"
 	"IranStocksCrawler/system/config"
+	"encoding/base64"
 	"errors"
 	"strings"
 	"time"
@@ -45,7 +46,12 @@ func updateMarketDetails() error {
 	//	return nil
 	//}
 
-	conten, errFetch := Fetch(DEF_URLS_MARKET_STATUS_URL, DEF_PATHS_MARKET_STATUS_PATH, time.Second*0)
+	agent := settings["curl-agent"]
+	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_MARKET_STATUS_URL))
+	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
+
+	content, errFetch := Fetch(url, DEF_PATHS_MARKET_STATUS_PATH, 0)
+
 	if errFetch != nil {
 		// byteData, errFetch2 := os.ReadFile("C:/Go_Projects/IranStocksCrawler/files/pricedata2022-10-01-11-36-57.txt")
 		// content2 := string(byteData)
@@ -67,7 +73,7 @@ func updateMarketDetails() error {
 	}
 
 	//doc, err := htmlquery.LoadDoc(DEF_PATHS_MARKET_STATUS_PATH)
-	doc, err := htmlquery.Parse(strings.NewReader(conten))
+	doc, err := htmlquery.Parse(strings.NewReader(content))
 	if err != nil {
 		consecutiveAtempts["FailedUpdateMarketDetails"]++
 		return errors.New("gathered data is incomplete")

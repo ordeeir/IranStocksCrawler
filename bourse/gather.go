@@ -29,7 +29,12 @@ func gatherPrices() error {
 		gatheringPrices = false
 	}()
 
-	content, errFetch := Fetch(DEF_URLS_PRICE_URL, DEF_PATHS_PRICE_PATH, time.Second*10)
+	agent := settings["curl-agent"]
+	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_PRICE_URL))
+	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
+
+	content, errFetch := Fetch(url, DEF_PATHS_PRICE_PATH, 0)
+
 	if errFetch != nil {
 
 		consecutiveAtempts["FailedUpdatePrices"]++
@@ -70,7 +75,12 @@ func gatherIO() error {
 
 	logrus.Debugf("gatherIO tick. stockIOList has %v symbols", len(stockIOList))
 
-	content, errFetch := Fetch(DEF_URLS_IO_URL, DEF_PATHS_IO_PATH, time.Second*10)
+	agent := settings["curl-agent"]
+	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_IO_URL))
+	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
+
+	content, errFetch := Fetch(url, DEF_PATHS_IO_PATH, 0)
+
 	if errFetch != nil {
 		consecutiveAtempts["FailedUpdateIO"]++
 		return errors.New("Error in getting market io data (fetch)")
@@ -106,7 +116,12 @@ func gatherPeriodicAverages() error {
 		return errors.New("Error in getting market periodic avg data (over atempt)")
 	}
 
-	content, errFetch := Fetch(DEF_URLS_PERIODIC_AVERAGES_URL, DEF_PATHS_PERIODIC_AVERAGES_PATH, time.Hour*6)
+	agent := settings["curl-agent"]
+	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_PERIODIC_AVERAGES_URL))
+	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
+
+	content, errFetch := Fetch(url, DEF_PATHS_PERIODIC_AVERAGES_PATH, 0)
+
 	if errFetch != nil {
 		consecutiveAtempts["FailedUpdatePeriodicAverages"]++
 		return errors.New("Error in getting market periodic avg data (fetch)")
@@ -140,7 +155,7 @@ func gatherIndiOrga365Days(tseCode string) (string, error) {
 	base64Url := base64.StdEncoding.EncodeToString([]byte(url))
 	url = strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
 
-	content, errFetch := Fetch(url, DEF_PATHS_PERIODIC_AVERAGES_PATH, 0)
+	content, errFetch := Fetch(url, DEF_PATHS_INDIORGA_DAYS_DATA_PATH, 0)
 	if errFetch != nil {
 		consecutiveAtempts["FailedUpdateIndiOrga365Days"]++
 		return "", errors.New("Error in getting indi orga 365 days data (fetch)")
