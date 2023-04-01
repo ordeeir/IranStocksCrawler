@@ -753,16 +753,15 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 	// 	"Last3MonthAverageVolume": "5",
 	// }
 
-	i := 0
+	//i := 0
 
 	for _, _row := range records {
 		//logrus.Debug("11111: " + _row)
 
-		i++
-		if i > 5 {
-			continue
-
-		}
+		// i++
+		// if i > 5 {
+		// 	continue
+		// }
 
 		row := strings.Split(_row, ",")
 
