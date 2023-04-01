@@ -784,7 +784,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 			}
 		}
 
-		//logrus.Debug("11111 " + sar.TSE_Code)
+		logrus.Debug("11111 " + sar.TSE_Code)
 
 		// reject unnecessary rows
 		_, isExist := stockTseTOSymbolList[sar.TSE_Code]
@@ -792,7 +792,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 			continue
 		}
 
-		//logrus.Debug("22222 " + sar.Symbol)
+		logrus.Debug("22222 " + sar.Symbol)
 
 		sar.Symbol = stockTseTOSymbolList[sar.TSE_Code]
 
