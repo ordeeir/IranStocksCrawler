@@ -763,11 +763,13 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 			Last3MonthAverageVolume: toInt(row[colsNumber["Last3MonthAverageVolume"]]),
 		}
 
+		logrus.Debug("11111 " + sar.TSE_Code)
 		// reject unnecessary rows
 		_, isExist := stockTseTOSymbolList[sar.TSE_Code]
 		if isExist == false {
 			continue
 		}
+		logrus.Debug("22222 " + sar.Symbol)
 
 		sar.Symbol = stockTseTOSymbolList[sar.TSE_Code]
 
