@@ -378,6 +378,7 @@ func providePriceDetails(cacher *cacher.Cacher) {
 		cacher.Put("lastTimeStorage", todayYMDHM(), 30*24*60*60)
 
 		logrus.Debugf("stockPriceList with %v symbols gathered and stored into redis", len(stockPriceList))
+		logrus.Debugf("stockTseTOSymbolList with %v symbols stored into redis", len(stockTseTOSymbolList))
 	}
 }
 
@@ -743,7 +744,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 
 	records := strings.Split(currentPeriodicAveragesContent, ";")
 
-	logrus.Debugf("currentPeriodicAveragesContent has %v length, records have %v rows", len(currentPeriodicAveragesContent), len(records))
+	//logrus.Debugf("currentPeriodicAveragesContent has %v length, records have %v rows", len(currentPeriodicAveragesContent), len(records))
 
 	stockPeriodicAveragesList = map[string]*StockAverages{}
 
