@@ -27,7 +27,7 @@ var stockPeriodicAveragesList map[string]*StockAverages
 var stockAskBidTableList map[string]*StockAskBidTable
 var stockTodaySeriesList map[string]*StockTodaySeries = map[string]*StockTodaySeries{}
 
-var stockIndiOrga365DaysList map[string]StockIndiOrga365Days
+var stockIndiOrga365DaysList map[string]StockIndiOrga365Days = map[string]StockIndiOrga365Days{}
 var stockTseTOSymbolList map[string]string
 
 var lastClockNumber int64 = -1
