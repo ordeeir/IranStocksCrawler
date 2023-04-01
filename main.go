@@ -4,42 +4,111 @@ import (
 	"IranStocksCrawler/bourse"
 	"IranStocksCrawler/helpers/osh"
 	"IranStocksCrawler/helpers/timeh"
-	sys "IranStocksCrawler/system"
+	driver "IranStocksCrawler/system"
 	"IranStocksCrawler/system/config"
+	"os"
 
 	"fmt"
 	"net/http"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 func main() {
 
 	timeh.Init()
 
+	loglevel := os.Getenv("LOG_LEVEL")
+	if loglevel != "" {
+		ll, err := logrus.ParseLevel(loglevel)
+		if err == nil {
+			logrus.SetLevel(ll)
+		}
+	}
+
 	conf, _, _ := config.NewConfig(osh.GetRootPath() + "/config.json")
 
-	sys.SetConfig(conf)
+	driver.SetConfig(conf)
 
-	cacher := sys.CreateCacher()
+	storage := driver.CreateCacher()
 
-	router := sys.CreateRouter()
+	router := driver.CreateRouter()
 
 	bourse.SetConfigSettings(conf.Settings)
 
-	//bourse.GetTime()
+	_ = storage.Put("z2", "22", 24*60*60)
+	z := storage.Get("z2")
+	if z != nil && z.(string) == "22" {
+		logrus.Debug("Connected to Redis successfully")
 
+	} else {
+		logrus.Debug("Redis Connection failed")
+
+	}
+
+	//
 	router.HttpGet("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("Welcome lucky man")
+
+		resp := "Welcome lucky man"
+		w.Write([]byte(resp))
 	})
 
-	router.HttpGet("/tostring", func(w http.ResponseWriter, r *http.Request) {
+	router.HttpGet("/GetTodaySeries/{symbol}", func(w http.ResponseWriter, r *http.Request) {
+		value := router.Var(r, "symbol")
+
+		resp := bourse.GetTodaySeries(value)
+		w.Write([]byte(resp))
+	})
+
+	router.HttpGet("/GetIndiOrga", func(w http.ResponseWriter, r *http.Request) {
+		//value := router.Var(r, "symbol")
+
+		resp := bourse.GetIndiOrga()
+		w.Write([]byte(resp))
+	})
+
+	router.HttpGet("/CrawlerStatus", func(w http.ResponseWriter, r *http.Request) {
+
+		s := "Root Path: " + osh.GetRootPath() + "\r\n"
+		s += "Prices Updated At : " + timeh.TimeFormat(bourse.LastSuccessGatheringPrices, "Y-m-d H:i:s") + "\r\n"
+
+		w.Write([]byte(s))
+	})
+
+	router.HttpGet("/Delete", func(w http.ResponseWriter, r *http.Request) {
+
+		bourse.ResetGatheredData(storage)
+
+		s := "Deleted.\r\n"
+
+		w.Write([]byte(s))
+	})
+
+	router.HttpGet("/MarketString", func(w http.ResponseWriter, r *http.Request) {
+
+		content2, _ := bourse.Fetch(bourse.DEF_URLS_PRICE_URL, bourse.DEF_PATHS_MARKET_STATUS_PATH, time.Second*0)
+
+		pureYear, pureMonth, pureDay, pureHour, pureMin, pureSec := bourse.DepartMarketStatusPureContent(content2)
+
+		s := "y: " + pureYear + "\r\n"
+		s += "m: " + pureMonth + "\r\n"
+		s += "d: " + pureDay + "\r\n"
+		s += "h: " + pureHour + "\r\n"
+		s += "i: " + pureMin + "\r\n"
+		s += "s: " + pureSec + "\r\n"
+
+		w.Write([]byte(s))
+	})
+
+	router.HttpGet("/Tostring", func(w http.ResponseWriter, r *http.Request) {
 
 		s := bourse.ToString()
 
 		w.Write([]byte(s))
 	})
 
-	router.HttpGet("/fetchUrl", func(w http.ResponseWriter, r *http.Request) {
+	router.HttpGet("/FetchUrl", func(w http.ResponseWriter, r *http.Request) {
 
 		url := r.URL.Query().Get("url")
 		path := r.URL.Query().Get("path")
@@ -52,11 +121,12 @@ func main() {
 
 		const tickPriceInterval = time.Second * 20
 		const tickIOInterval = time.Second * 40
-		const tickPeriodicAvgsInterval = time.Hour * 6
+		const tickPeriodicAvgsInterval = time.Second * 60
 
 		tickPrices := time.NewTicker(time.Second * 1)
 		tickIO := time.NewTicker(time.Second * 5)
 		tickPeriodicAvgs := time.NewTicker(time.Second * 10)
+		tickIndiOrga := time.NewTicker(time.Second * 5)
 		tickFilters := time.NewTicker(time.Second * 30)
 
 		fmt.Println("\n---")
@@ -65,7 +135,8 @@ func main() {
 			select {
 
 			case <-tickPrices.C:
-				err := bourse.UpdatePrices(cacher)
+
+				err := bourse.UpdatePrices(storage)
 				if err {
 					tickPrices = time.NewTicker(time.Second * 5)
 				} else {
@@ -74,7 +145,8 @@ func main() {
 				continue
 
 			case <-tickIO.C:
-				err := bourse.UpdateIO(cacher)
+
+				err := bourse.UpdateIO(storage)
 				if err {
 					tickIO = time.NewTicker(time.Second * 5)
 				} else {
@@ -83,20 +155,28 @@ func main() {
 				continue
 
 			case <-tickPeriodicAvgs.C:
-				// err := bourse.UpdatePeriodicAverages(cacher)
-				// if err {
-				// 	tickPeriodicAvgs = time.NewTicker(time.Second * 5)
-				// } else {
-				// 	tickPeriodicAvgs = time.NewTicker(tickPeriodicAvgsInterval)
-				// }
+
+				err := bourse.UpdatePeriodicAverages(storage)
+				if err {
+					tickPeriodicAvgs = time.NewTicker(time.Second * 5)
+				} else {
+					tickPeriodicAvgs = time.NewTicker(tickPeriodicAvgsInterval)
+				}
+				continue
+
+			case <-tickIndiOrga.C:
+
+				_ = bourse.UpdateIndiOrga365Days(storage)
+
 				continue
 
 			case <-tickFilters.C:
+
 				tickFilters = time.NewTicker(time.Second * 20)
 
 				bourse.InitFilters()
 
-				bourse.ApplyFilters(cacher)
+				bourse.ApplyFilters(storage)
 
 				continue
 
@@ -107,4 +187,8 @@ func main() {
 
 	router.HttpServe("1212")
 
+}
+
+func convert(str string) string {
+	return (str)
 }

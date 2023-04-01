@@ -4,11 +4,15 @@ import (
 	"IranStocksCrawler/helpers/stringsh"
 	"IranStocksCrawler/helpers/timeh"
 	"IranStocksCrawler/system/cacher"
+	"errors"
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var consecutiveAtempts map[string]int = make(map[string]int)
@@ -23,7 +27,10 @@ var stockPeriodicAveragesList map[string]*StockAverages
 var stockAskBidTableList map[string]*StockAskBidTable
 var stockTodaySeriesList map[string]*StockTodaySeries = map[string]*StockTodaySeries{}
 
+var stockIndiOrga365DaysList map[string]StockIndiOrga365Days
 var stockTseTOSymbolList map[string]string
+
+var lastClockNumber int64 = -1
 
 //
 
@@ -105,9 +112,52 @@ type AskBidTableRow struct {
 	Quantity int
 }
 
+type StockIndiOrga struct {
+	QuantityIndiBuy  string
+	QuantityOrgaBuy  string
+	QuantityIndiSell string
+	QuantityOrgaSell string
+	VolumeIndiBuy    string
+	VolumeOrgaBuy    string
+	VolumeIndiSell   string
+	VolumeOrgaSell   string
+	AmountIndiBuy    string
+	AmountOrgaBuy    string
+	AmountIndiSell   string
+	AmountOrgaSell   string
+}
+
+type StockIndiOrga365Days struct {
+	Days       map[string]StockIndiOrga
+	LastUpdate string
+}
+
 func UpdatePrices(cacher *cacher.Cacher) bool {
 
-	err := gatherPrices()
+	var err error
+
+	err = errors.New("")
+
+	if IsOpenTime() == false {
+		SetMarketClose()
+	}
+
+	if IsOpenTime() && MarketBeenOpenToday() {
+
+		marketIsOpen := MarketIsOpen()
+
+		if marketIsOpen == false {
+			ResetGatheredData(cacher)
+			SetMarketOpen()
+		}
+
+		err = gatherPrices()
+
+	}
+
+	if IsGeneralInfoEmpty() {
+		err = gatherPrices()
+	}
 
 	if err == nil {
 
@@ -124,7 +174,12 @@ func UpdatePrices(cacher *cacher.Cacher) bool {
 
 func UpdateIO(cacher *cacher.Cacher) bool {
 
-	err := gatherIO()
+	err := errors.New("")
+
+	if IsOpenTime() && MarketBeenOpenToday() {
+		err = gatherIO()
+
+	}
 
 	if err == nil {
 
@@ -136,11 +191,96 @@ func UpdateIO(cacher *cacher.Cacher) bool {
 
 func UpdatePeriodicAverages(cacher *cacher.Cacher) bool {
 
-	err := gatherPeriodicAverages()
+	err := errors.New("")
+
+	if IsPeriodicAveragesEmpty() {
+		err = gatherPeriodicAverages()
+	}
 
 	if err == nil {
 
 		providePeriodicAverages(cacher)
+	}
+
+	return false
+}
+
+func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
+
+	if nowDM() <= "06:00" {
+		return false
+	}
+
+	if IsGeneralInfoEmpty() == false {
+
+		if len(stockIndiOrga365DaysList) == 0 {
+
+			json := cacher.Get("stockIndiOrga365DaysList")
+
+			if json != nil {
+				stockIndiOrga365DaysList = ConvertMapOfInterfaceToStockIndiOrga365Days(json)
+			}
+		}
+
+		i := 0
+
+		for sym, item := range stockPriceList {
+
+			i++
+
+			content, err := gatherIndiOrga365Days(item.TSE_Code)
+
+			symDays, ok := stockIndiOrga365DaysList[sym]
+			if !ok {
+				symDays = StockIndiOrga365Days{
+					LastUpdate: "00-00",
+					Days:       map[string]StockIndiOrga{},
+				}
+			}
+
+			if symDays.LastUpdate == todayMD() {
+				continue
+			}
+
+			if err == nil {
+
+				rows := strings.Split(content, ";")
+
+				row := []string{}
+
+				for _, j := range rows {
+					row = strings.Split(j, ",")
+
+				}
+
+				indiOrga := StockIndiOrga{}
+				indiOrga.QuantityIndiBuy = row[1]
+				indiOrga.QuantityOrgaBuy = row[2]
+				indiOrga.QuantityIndiSell = row[3]
+				indiOrga.QuantityOrgaSell = row[4]
+				indiOrga.VolumeIndiBuy = row[5]
+				indiOrga.VolumeOrgaBuy = row[6]
+				indiOrga.VolumeIndiSell = row[7]
+				indiOrga.VolumeOrgaSell = row[8]
+				indiOrga.AmountIndiBuy = row[9]
+				indiOrga.AmountOrgaBuy = row[10]
+				indiOrga.AmountIndiSell = row[11]
+				indiOrga.AmountOrgaSell = row[12]
+
+				symDays.Days[rows[0]] = indiOrga
+				symDays.LastUpdate = todayMD()
+
+			}
+
+			stockIndiOrga365DaysList[sym] = symDays
+
+			if i >= 1 {
+
+				cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
+
+				return true
+			}
+		}
 	}
 
 	return false
@@ -233,8 +373,11 @@ func providePriceDetails(cacher *cacher.Cacher) {
 	}
 
 	if len(stockPriceList) > 200 {
-		cacher.Put("stockPriceList", stockPriceList, 24*60*60)
 
+		cacher.Put("stockPriceList", stockPriceList, 30*24*60*60)
+		cacher.Put("lastTimeStorage", todayYMDHM(), 30*24*60*60)
+
+		logrus.Debugf("stockPriceList with %v symbols gathered and stored into redis", len(stockPriceList))
 	}
 }
 
@@ -248,7 +391,7 @@ func provideAskBidTable(cacher *cacher.Cacher) {
 
 	tableRowsData := strings.Split(contentParts[3], ";")
 
-	stockAskBidTableList = make(map[string]*StockAskBidTable)
+	stockAskBidTableList = map[string]*StockAskBidTable{}
 
 	for _, rowData := range tableRowsData {
 		rowData := strings.Split(rowData, ",")
@@ -297,7 +440,117 @@ func provideAskBidTable(cacher *cacher.Cacher) {
 		}
 	}
 
-	cacher.Put("stockAskBidTableList", stockAskBidTableList, 24*60*60)
+	cacher.Put("stockAskBidTableList", stockAskBidTableList, 30*24*60*60)
+
+	logrus.Debugf("stockAskBidTableList with %v symbols gathered and stored into redis", len(stockAskBidTableList))
+
+}
+
+func ConvertMapOfInterfaceToStockTodaySeries(interf interface{}) map[string]*StockTodaySeries {
+
+	result := map[string]*StockTodaySeries{}
+
+	mainMap := interf.(map[string]interface{})
+
+	for symbol, inter1 := range mainMap {
+
+		ii := inter1.(map[string]interface{})
+
+		bv := ii["BuyVolume"].(map[string]interface{})
+		sv := ii["SellVolume"].(map[string]interface{})
+		lp := ii["LastPrice"].(map[string]interface{})
+		ibs := ii["IndiBuySaraneh"].(map[string]interface{})
+		iss := ii["IndiSellSaraneh"].(map[string]interface{})
+
+		buyVolume := LineInt{}
+		sellVolume := LineInt{}
+		lastPrice := LineInt{}
+		indiBuySaraneh := LineFloat{}
+		indiSellSaraneh := LineFloat{}
+
+		for _key, inter2 := range bv {
+			i, _ := strconv.ParseInt(_key, 10, 64)
+			buyVolume[i] = int64(inter2.(float64))
+		}
+		for _key, inter2 := range sv {
+			i, _ := strconv.ParseInt(_key, 10, 64)
+			sellVolume[i] = int64(inter2.(float64))
+		}
+		for _key, inter2 := range lp {
+			i, _ := strconv.ParseInt(_key, 10, 64)
+			lastPrice[i] = int64(inter2.(float64))
+		}
+		for _key, inter2 := range ibs {
+			i, _ := strconv.ParseInt(_key, 10, 64)
+			indiBuySaraneh[i] = inter2.(float64)
+		}
+		for _key, inter2 := range iss {
+			i, _ := strconv.ParseInt(_key, 10, 64)
+			indiSellSaraneh[i] = inter2.(float64)
+		}
+
+		result[symbol] = &StockTodaySeries{
+			BuyVolume:       buyVolume,
+			SellVolume:      sellVolume,
+			LastPrice:       lastPrice,
+			IndiBuySaraneh:  indiBuySaraneh,
+			IndiSellSaraneh: indiSellSaraneh,
+		}
+
+	}
+
+	return result
+}
+
+func ConvertMapOfInterfaceToStockIndiOrga365Days(interf interface{}) map[string]StockIndiOrga365Days {
+
+	result := map[string]StockIndiOrga365Days{}
+
+	mainMap := interf.(map[string]interface{})
+
+	for symbol, inter1 := range mainMap {
+
+		ii := inter1.(map[string]interface{})
+
+		_days := ii["Days"].(map[string]interface{})
+		lastUpdate := ii["LastUpdate"].(string)
+
+		days := map[string]StockIndiOrga{}
+
+		for _key, inter2 := range _days {
+			days[_key] = inter2.(StockIndiOrga)
+
+		}
+
+		result[symbol] = StockIndiOrga365Days{
+			Days:       days,
+			LastUpdate: lastUpdate,
+		}
+
+	}
+
+	return result
+}
+
+func nowDM() string {
+	timeZone, _ := time.LoadLocation("Asia/Tehran")
+
+	z := time.Now()
+	t := time.Date(z.Year(), z.Month(), z.Day(), z.Hour(), z.Minute(), z.Second(), 0, timeZone).UTC()
+
+	return t.Format("15:04")
+}
+
+func todayMD() string {
+	t := time.Now().Truncate(3 * time.Hour)
+	today := fmt.Sprintf("%02d-%02d", t.Month(), t.Day())
+	return today
+}
+
+func todayYMDHM() string {
+	t := time.Now()
+	ti := t.Format("2006-01-02 15:04:05")
+	return ti
 }
 
 func provideTodaySeries(cacher *cacher.Cacher) {
@@ -306,8 +559,44 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 		UpdateIO(cacher)
 	}
 
+	//today := todayMD()
+
 	clocknumber := GetClockNumber()
 
+	// last clock number
+	if lastClockNumber == -1 {
+
+		_interface := cacher.Get("lastClockNumber")
+
+		if _interface != nil {
+			lastClockNumber = int64(_interface.(float64))
+		} else {
+			lastClockNumber = 4 * 60 * 60
+		}
+
+	}
+
+	if clocknumber < lastClockNumber {
+		stockTodaySeriesList = map[string]*StockTodaySeries{}
+	}
+
+	if len(stockTodaySeriesList) == 0 {
+
+		// today series
+		_interface := cacher.Get("stockTodaySeriesList")
+
+		if _interface != nil {
+
+			stockTodaySeriesList = ConvertMapOfInterfaceToStockTodaySeries(_interface)
+
+			logrus.Debugf("stockTodaySeriesList loaded from redis (last clocknumber = %v)", lastClockNumber)
+		}
+	}
+
+	//
+	needToStore := false
+
+	// iterate
 	for _, stock := range stockPriceList {
 
 		// Today Stock Charts
@@ -315,11 +604,11 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 		ts, ok := stockTodaySeriesList[stock.Symbol]
 		if ok == false {
 			ts = &StockTodaySeries{
-				LastPrice:       make(LineInt, 0),
-				BuyVolume:       make(LineInt, 0),
-				SellVolume:      make(LineInt, 0),
-				IndiBuySaraneh:  make(LineFloat, 0),
-				IndiSellSaraneh: make(LineFloat, 0),
+				LastPrice:       LineInt{},
+				BuyVolume:       LineInt{},
+				SellVolume:      LineInt{},
+				IndiBuySaraneh:  LineFloat{},
+				IndiSellSaraneh: LineFloat{},
 			}
 		}
 
@@ -332,6 +621,7 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 			buyr, ok1 := buyr.BuyRows[stock.RangeTopPrice]
 			if ok1 == true {
 				ts.BuyVolume[clocknumber] = buyr.Volume
+				needToStore = true
 			}
 		}
 
@@ -342,6 +632,7 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 			sellr, ok2 := sellr.SellRows[stock.RangeBottomPrice]
 			if ok2 == true {
 				ts.SellVolume[clocknumber] = sellr.Volume
+				needToStore = true
 			}
 		}
 
@@ -350,13 +641,26 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 		if ok3 == true {
 			ts.IndiBuySaraneh[clocknumber] = ior.IndiBuySaraneh
 			ts.IndiSellSaraneh[clocknumber] = ior.IndiSellSaraneh
+			needToStore = true
 		}
 
 		stockTodaySeriesList[stock.Symbol] = ts
 
 	}
 
-	cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 24*60*60)
+	if needToStore {
+
+		lastClockNumber = clocknumber
+
+		logrus.Debugf("One row added to stockTodaySeriesList (last clocknumber = %v)", lastClockNumber)
+
+		cacher.Put("lastClockNumber", lastClockNumber, 30*24*60*60)
+		cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
+
+		logrus.Debugf("stockTodaySeriesList with %v symbols stored to stockTodaySeriesList in redis (last clocknumber = %v)", len(stockTodaySeriesList), lastClockNumber)
+
+	}
+
 }
 
 func provideIODetails(cacher *cacher.Cacher) {
@@ -381,7 +685,7 @@ func provideIODetails(cacher *cacher.Cacher) {
 	}
 
 	for _, row := range records {
-		row := strings.Split(row+",,,,,,,", ",")
+		row := strings.Split(row+",,,,,,,,,", ",")
 
 		sir := &StockIO{
 			TSE_Code:         row[colsNumber["TSE_Code"]],
@@ -429,12 +733,13 @@ func provideIODetails(cacher *cacher.Cacher) {
 
 	}
 
-	cacher.Put("stockIOList", stockIOList, 24*60*60)
+	cacher.Put("stockIOList", stockIOList, 30*24*60*60)
+
+	logrus.Debugf("stockIOList with %v symbols stored into redis", len(stockIOList))
+
 }
 
 func providePeriodicAverages(cacher *cacher.Cacher) {
-
-	//contentParts := strings.Split(currentIOContent, "@")
 
 	records := strings.Split(currentPeriodicAveragesContent, ";")
 
@@ -446,8 +751,8 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 		"Last3MonthAverageVolume": 5,
 	}
 
-	for _, row := range records {
-		row := strings.Split(row, ",")
+	for _, _row := range records {
+		row := strings.Split(_row, ",")
 
 		sar := &StockAverages{
 			TSE_Code:                row[colsNumber["TSE_Code"]],
@@ -467,29 +772,40 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 
 	}
 
-	cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 24*60*60)
+	cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
 }
 
-func storeTodayLines() {
+func proviseIndiOrga365Days() {
 
-	// todayStock, ok := todayStocks[sr.Symbol]
-	// if ok != true {
-	// 	todayStock = TodayStock{}
-	// }
-	// todayStock.LastPrice[marketTime] = sr.LastPrice
-	// todayStock.BuyVolume[marketTime] = sr.BuyVolumeAtFirst
-	// todayStock.SellVolume[marketTime] = sr.BaseVolume
-	// todayStock.IndiBySaraneh[marketTime] = sr.BaseVolume
+}
+
+func GetTodaySeries(symbol string) string {
+
+	data := stockTodaySeriesList[symbol]
+
+	return fmt.Sprint(data)
+}
+
+func GetIndiOrga() string {
+
+	data := stockIndiOrga365DaysList
+
+	return fmt.Sprint(data)
 }
 
 func ToString() string {
-	//s := "length of stockPriceList: " + strconv.Itoa(len(stockPriceList)) + "\r\n"
+	var array map[string]StockTodaySeries = make(map[string]StockTodaySeries)
 
-	//stock := stockTodaySeriesList["شپنا"]
-	//x := fmt.Sprint(stock)
-	//s = s + "Series1: " + arrayToString(stock.LastPrice, ",") + "\r\n"
+	i := 0
+	for key, item := range stockTodaySeriesList {
+		if i > 10 {
+			break
+		}
 
-	return fmt.Sprint(stockTodaySeriesList)
+		array[key] = *item
+	}
+
+	return fmt.Sprint(array)
 }
 
 func toInt(str string) int64 {
@@ -501,4 +817,45 @@ func toInt(str string) int64 {
 
 func arrayToString(a LineInt, delimiter string) string {
 	return strings.Trim(strings.Replace(fmt.Sprint(a), " ", delimiter, -1), "[]")
+}
+
+func IsGeneralInfoEmpty() bool {
+	if len(stockPriceList) == 0 {
+		return true
+	}
+	return false
+}
+
+func IsPeriodicAveragesEmpty() bool {
+	if len(stockPeriodicAveragesList) == 0 {
+		return true
+	}
+	return false
+}
+
+func ResetGatheredData(cacher *cacher.Cacher) {
+
+	stockTodaySeriesList = map[string]*StockTodaySeries{}
+	stockAskBidTableList = map[string]*StockAskBidTable{}
+	currentPriceContent = ""
+	currentIOContent = ""
+	currentPeriodicAveragesContent = ""
+
+	stockPriceList = map[string]*StockPrice{}
+	stockIOList = map[string]*StockIO{}
+	stockPeriodicAveragesList = map[string]*StockAverages{}
+	stockAskBidTableList = map[string]*StockAskBidTable{}
+	stockTodaySeriesList = map[string]*StockTodaySeries{}
+
+	stockTseTOSymbolList = map[string]string{}
+
+	cacher.Put("stockPriceList", stockPriceList, 30*24*60*60)
+	cacher.Put("stockAskBidTableList", stockAskBidTableList, 30*24*60*60)
+	cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
+	cacher.Put("stockIOList", stockIOList, 30*24*60*60)
+	cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
+
+	logrus.Debug("storage is reset and stored in redis")
+
+	return
 }

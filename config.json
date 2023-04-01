@@ -11,11 +11,11 @@
         "options":{
             "redis":{
                 "network": "tcp",
-                "host": "127.0.0.1",
-                "port": "6364",
+                "host": "91.107.130.30",
+                "port": "6379",
                 "username": "",
-                "password": "",
-                "db": 1,
+                "password": "123#abada@",
+                "db": 2,
                 "maxRetries": 3,
                 "poolSize": 10,
                 "minIdleConns": 5
@@ -36,7 +36,8 @@
     },
     "general_settings":{
         "start-time":"09:00",
-        "end-time":"12:30"
+        "end-time":"12:30",
+        "curl-agent":"https://destinia.ir/includes/curl.php?u={BASE64_URL}&gzdecode=1"
     }
  
 }

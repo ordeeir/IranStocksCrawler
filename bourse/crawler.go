@@ -7,9 +7,18 @@ import (
 	"os"
 
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
-func Fetch(url string, savePath string, cachedTime time.Duration) (string, error) {
+func Fetch(url string, savePath string, cachedTime time.Duration) (result string, err error) {
+	defer func() {
+		if err != nil {
+			logrus.Debugf("getting url FAILED : %v , saved path: %v", url, savePath)
+		} else {
+			logrus.Debugf("getting url SUCCEED : %v , saved path: %v", url, savePath)
+		}
+	}()
 
 	fi, err := os.Stat(savePath)
 
@@ -30,6 +39,8 @@ func Fetch(url string, savePath string, cachedTime time.Duration) (string, error
 	if len(byteData) < 5000 {
 
 		client := &http.Client{Timeout: 5 * time.Second}
+
+		//logrus.Debug("start getting url %v ", url)
 
 		resp, err := client.Get(url)
 

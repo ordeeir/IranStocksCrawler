@@ -9,7 +9,14 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "C:\\Go_Projects\\IranStocksCrawler\\main.go"
+            "program": "C:\\Go_Projects\\IranStocksCrawler\\main.go",
+            "args": [
+                //"-test.run",
+                //"TestWithHTTP"
+            ],
+            "env": {
+              "LOG_LEVEL":"debug"
+            }
         }
     ]
 }

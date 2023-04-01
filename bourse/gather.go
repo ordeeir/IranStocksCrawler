@@ -1,30 +1,27 @@
 package bourse
 
 import (
-	"IranStocksCrawler/helpers/osh"
-	"IranStocksCrawler/helpers/timeh"
+	"encoding/base64"
 	"errors"
-	"os"
+	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 )
 
 var gatheringPrices bool = false
 var gatheringIO bool = false
 var gatheringPeriodicAverages bool = false
+var gatheringIndiOrga365Days bool = false
+
+var LastSuccessGatheringPrices time.Time
 
 func gatherPrices() error {
 
 	if gatheringPrices == true {
 		return errors.New("gathering engine is busy")
 	}
-
-	// dont check first time
-	if len(stockPriceList) > 0 {
-		clocknumber := GetClockNumber()
-		if clocknumber > 12*60*60 {
-			return errors.New("Error in market time is not set correctly")
-		}
-	}
+	logrus.Debugf("gatherPrices tick. stockPriceList has %v symbols", len(stockPriceList))
 
 	gatheringPrices = true
 
@@ -32,29 +29,32 @@ func gatherPrices() error {
 		gatheringPrices = false
 	}()
 
-	if consecutiveAtempts["FailedUpdatePrices"] > 10 {
-		//log.Fatalf("Error in getting market data")
-		return errors.New("Error in getting market data (over atempt)")
+	content, errFetch := Fetch(DEF_URLS_PRICE_URL, DEF_PATHS_PRICE_PATH, time.Second*10)
+	if errFetch != nil {
+
+		consecutiveAtempts["FailedUpdatePrices"]++
+		return errors.New("Error in getting market data (fetch)")
+
 	}
 
-	st := GetMarketStatus()
+	//b := []byte(content)
+	//os.WriteFile(osh.GetRootPath()+"/files/pricedata"+timeh.TimeFormat(time.Now(), "Y-m-d-H-i-s")+".txt", b, 0777)
 
-	if st == DEF_MARKET_STATUS_OPEN || len(stockPriceList) == 0 {
+	// check valid str
+	contentParts := strings.Split(content, "@")
 
-		content, errFetch := Fetch(DEF_URLS_PRICE_URL, DEF_PATHS_PRICE_PATH, time.Second*10)
-		if errFetch != nil {
-			consecutiveAtempts["FailedUpdatePrices"]++
-			return errors.New("Error in getting market data (fetch)")
-		}
+	if len(contentParts) < 2 {
 
-		b := []byte(content)
-		os.WriteFile(osh.GetRootPath()+"/files/pricedata"+timeh.TimeFormat(time.Now(), "Y-m-d-H-i-s")+".txt", b, 0777)
-		currentPriceContent = content
+		logrus.Warn("Url fetched but content of prices is invalid")
 
-		return nil
+		return errors.New("Error in getting market data (fetch)")
 	}
 
-	return errors.New("Market is closed")
+	logrus.Debug("Gathering Prices done")
+
+	currentPriceContent = content
+
+	return nil
 }
 
 func gatherIO() error {
@@ -68,28 +68,26 @@ func gatherIO() error {
 		gatheringIO = false
 	}()
 
-	if consecutiveAtempts["FailedUpdateIO"] > 10 {
-		//log.Fatalf("Error in getting market data")
-		return errors.New("Error in getting market io data (over atempt)")
+	logrus.Debugf("gatherIO tick. stockIOList has %v symbols", len(stockIOList))
+
+	content, errFetch := Fetch(DEF_URLS_IO_URL, DEF_PATHS_IO_PATH, time.Second*10)
+	if errFetch != nil {
+		consecutiveAtempts["FailedUpdateIO"]++
+		return errors.New("Error in getting market io data (fetch)")
 	}
 
-	if marketStatus == DEF_MARKET_STATUS_OPEN || len(stockIOList) == 0 {
+	records := strings.Split(content, ";")
 
-		content, errFetch := Fetch(DEF_URLS_IO_URL, DEF_PATHS_IO_PATH, time.Second*10)
-		if errFetch != nil {
-			consecutiveAtempts["FailedUpdateIO"]++
-			return errors.New("Error in getting market io data (fetch)")
-		}
-
-		b := []byte(content)
-		os.WriteFile(osh.GetRootPath()+"/files/iodata"+timeh.TimeFormat(time.Now(), "Y-m-d-H-i-s")+".txt", b, 0777)
-
-		currentIOContent = content
-
-		return nil
+	if len(records) < 10 {
+		logrus.Warn("Url fetched but content of IO is invalid")
 	}
 
-	return errors.New("Market is closed")
+	logrus.Debug("Gathering IO done")
+
+	currentIOContent = content
+
+	return nil
+
 }
 
 func gatherPeriodicAverages() error {
@@ -117,5 +115,37 @@ func gatherPeriodicAverages() error {
 	currentPeriodicAveragesContent = content
 
 	return nil
+
+}
+
+func gatherIndiOrga365Days(tseCode string) (string, error) {
+
+	if gatheringIndiOrga365Days == true {
+		return "", errors.New("gathering engine is busy")
+	}
+	gatheringIndiOrga365Days = true
+
+	defer func() {
+		gatheringIndiOrga365Days = false
+	}()
+
+	//if consecutiveAtempts["FailedUpdatePeriodicAverages"] > 10 {
+	//log.Fatalf("Error in getting market data")
+	//return "",errors.New("Error in getting market periodic avg data (over atempt)")
+	//}
+
+	url := strings.ReplaceAll(DEF_URLS_INDIORGA_DAYS_DATA_URL, "{TSE_CODE}", tseCode)
+
+	agent := settings["curl-agent"]
+	base64Url := base64.StdEncoding.EncodeToString([]byte(url))
+	url = strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
+
+	content, errFetch := Fetch(url, DEF_PATHS_PERIODIC_AVERAGES_PATH, 0)
+	if errFetch != nil {
+		consecutiveAtempts["FailedUpdateIndiOrga365Days"]++
+		return "", errors.New("Error in getting indi orga 365 days data (fetch)")
+	}
+
+	return content, nil
 
 }

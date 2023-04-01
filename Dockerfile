@@ -1,16 +1,19 @@
-FROM golang:1.16-alpine
+FROM golang:1.17-alpine
+RUN apk add build-base
 
-WORKDIR /app
+WORKDIR /IranStocksCrawler
 
 COPY go.mod ./
 COPY go.sum ./
-RUN go mod download
 
-COPY *.go ./
+COPY . .
 
-RUN go build -o /main1
+CMD ["/bin/sh" ,"-c" ,"go mod download"]
 
-EXPOSE 8080
+RUN go build -o ./stockscrawler
 
-CMD [ "/main1" ]
- 
+#EXPOSE 1212
+
+#CMD tail -f /dev/null
+
+ENTRYPOINT [ "./stockscrawler" ]

@@ -2,7 +2,6 @@ package bourse
 
 import (
 	"IranStocksCrawler/helpers/stringsh"
-	"IranStocksCrawler/helpers/timeh"
 	"IranStocksCrawler/system/config"
 	"errors"
 	"strings"
@@ -10,7 +9,10 @@ import (
 	"unicode"
 
 	"github.com/antchfx/htmlquery"
-	ptime "github.com/yaa110/go-persian-calendar"
+)
+
+const (
+	DateTime = "2006-01-02 15:04:05"
 )
 
 var marketStatus MarketStatusType = DEF_MARKET_STATUS_UNKNOWN
@@ -19,19 +21,29 @@ var marketDate string
 var marketStatusLastUpdate time.Time
 var marketStatusLastCheck time.Time
 
+var marketIsOpen bool = false
+var lastTimeMarketOpen string
+var lastTimeMarketUpdate string
+
 var settings config.ConfigList
 
 type MarketStatusType int
 
-func updateMarketDetails() (string, error) {
+func updateMarketDetails() error {
 
-	if consecutiveAtempts["FailedUpdateMarketDetails"] > 10 {
-		return "", errors.New("many efforts without expectable result")
-	}
+	//if isMarketTime() == false {
+	//	setMarketStatus(DEF_MARKET_STATUS_CLOSE)
 
-	if isMarketUpdated() {
-		return "", nil
-	}
+	//	return nil
+	//}
+
+	// if consecutiveAtempts["FailedUpdateMarketDetails"] > 10 {
+	// 	return "", errors.New("many efforts without expectable result")
+	// }
+
+	//if isMarketUpdated() {
+	//	return nil
+	//}
 
 	conten, errFetch := Fetch(DEF_URLS_MARKET_STATUS_URL, DEF_PATHS_MARKET_STATUS_PATH, time.Second*0)
 	if errFetch != nil {
@@ -49,7 +61,7 @@ func updateMarketDetails() (string, error) {
 
 		// if errFetch2 != nil {
 		consecutiveAtempts["FailedUpdateMarketDetails"]++
-		return "", errFetch
+		return errFetch
 		// }
 
 	}
@@ -58,13 +70,13 @@ func updateMarketDetails() (string, error) {
 	doc, err := htmlquery.Parse(strings.NewReader(conten))
 	if err != nil {
 		consecutiveAtempts["FailedUpdateMarketDetails"]++
-		return "", errors.New("gathered data is incomplete")
+		return errors.New("gathered data is incomplete")
 	}
 
 	container := htmlquery.Find(doc, "//table[@class='table1']//tr[1]//td")
 	if container == nil {
 		consecutiveAtempts["FailedUpdateMarketDetails"]++
-		return "", errors.New("Time not found in gathered data")
+		return errors.New("Time not found in gathered data")
 	}
 
 	containerText := htmlquery.InnerText(container[1])
@@ -72,7 +84,7 @@ func updateMarketDetails() (string, error) {
 	container2 := htmlquery.Find(doc, "//table[@class='table1']//tr[5]//td")
 	if container2 == nil {
 		consecutiveAtempts["FailedUpdateMarketDetails"]++
-		return "", errors.New("Date not found in gathered data")
+		return errors.New("Date not found in gathered data")
 	}
 	containerText2 := htmlquery.InnerText(container2[1])
 	var dateParts []string = make([]string, 0)
@@ -95,6 +107,7 @@ func updateMarketDetails() (string, error) {
 	parts := strings.Split(containerText, " ")
 
 	if parts[0] == "باز" {
+		setLastTimeMarketOpen()
 		setMarketStatus(DEF_MARKET_STATUS_OPEN)
 	} else {
 		setMarketStatus(DEF_MARKET_STATUS_CLOSE)
@@ -111,8 +124,9 @@ func updateMarketDetails() (string, error) {
 	consecutiveAtempts["FailedUpdateMarketDetails"] = 0
 
 	marketStatusLastUpdate = time.Now()
+	setLastTimeMarketUpdate()
 
-	return "", nil
+	return nil
 }
 
 func setMarketStatus(st MarketStatusType) {
@@ -120,8 +134,56 @@ func setMarketStatus(st MarketStatusType) {
 }
 
 func GetMarketStatus() MarketStatusType {
-	updateMarketDetails()
 	return marketStatus
+}
+
+func setLastTimeMarketOpen() {
+	lastTimeMarketOpen = time.Now().Format(DateTime) // Y-m-d H:i:s
+}
+
+func getLastTimeMarketOpen() string {
+	if lastTimeMarketOpen == "" {
+		lastTimeMarketOpen = "2001-01-01 00:00:00"
+	}
+	return lastTimeMarketOpen
+}
+
+func setLastTimeMarketUpdate() {
+	lastTimeMarketUpdate = time.Now().Format(DateTime) // Y-m-d H:i:s
+}
+
+func getLastTimeMarketUpdate() string {
+	if lastTimeMarketUpdate == "" {
+		lastTimeMarketUpdate = "2001-01-01 00:00:00"
+	}
+	return lastTimeMarketUpdate
+}
+
+func MarketBeenOpenToday() bool {
+
+	to, err := time.Parse(DateTime, getLastTimeMarketOpen())
+	if err != nil {
+		return false
+	}
+
+	now := time.Now()
+
+	if to.Month() == now.Month() {
+		if to.Day() == now.Day() {
+			return true
+		}
+	}
+
+	tu, err := time.Parse(DateTime, getLastTimeMarketUpdate())
+	if err != nil {
+		return false
+	}
+
+	if now.Sub(tu).Minutes() > 5 {
+		updateMarketDetails()
+	}
+
+	return false
 }
 
 func setDate(date string) {
@@ -139,10 +201,6 @@ func GetDate() string {
 
 func setTime(hour string, minute string) {
 	marketTime = hour + ":" + minute
-
-	//dura := toInt(hour)*60 + toInt(minute)
-
-	//marketOpenTime = time.Date(int(toInt(tStr[0])), time.Month(int(toInt(tStr[1]))), int(toInt(tStr[2])), int(toInt(tStr[3])), int(toInt(tStr[4])), int(toInt(tStr[5])), 0, time.UTC)
 }
 
 func GetTime() string {
@@ -150,19 +208,40 @@ func GetTime() string {
 	return marketTime
 }
 
+func IsOpenTime() bool {
+
+	to, tc := GetMarketOpenCloseTime()
+
+	a := time.Now().Sub(to).Seconds()
+	b := time.Now().Sub(tc).Seconds()
+
+	if a > 0 && b < 0 {
+		//st := GetMarketStatus()
+		//if st == DEF_MARKET_STATUS_OPEN {
+		return true
+		//}
+	}
+
+	return false
+}
+
+func MarketIsOpen() bool {
+	return marketIsOpen
+}
+
+func SetMarketOpen() {
+	marketIsOpen = true
+}
+
+func SetMarketClose() {
+	marketIsOpen = false
+}
+
 func GetClockNumber() int64 {
 
 	to, tc := GetMarketOpenCloseTime()
 
 	_ = tc
-
-	//if time.Now().Sub(to) > time.Hour*10 {
-
-	//marketOpenTime = time.Date(2022, time.Month(10), time.Now().Day(), 9, 0, 0, 0, time.UTC)
-	//marketOpenTime = t
-	//}
-
-	// //setStatus(DEF_MARKET_STATUS_OPEN) // del
 
 	return int64(time.Now().Sub(to).Seconds())
 }
@@ -193,78 +272,33 @@ func GetMarketOpenCloseTime() (time.Time, time.Time) {
 	return o, c
 }
 
-func __GetMarketStatus() MarketStatusType {
+func DepartMarketStatusPureContent(content string) (pureYear string, pureMonth string, pureDay string, pureHour string, pureMin string, pureSec string) {
 
-	tnow := time.Now()
-	to, tc := GetMarketOpenCloseTime()
+	contentParts := strings.Split(content, "@")
 
-	if tnow.Unix() > tc.Unix() || tnow.Unix() < to.Unix() {
-		return DEF_MARKET_STATUS_CLOSE
+	pureYear = ""
+	pureMonth = ""
+	pureDay = ""
+
+	pureHour = ""
+	pureMin = ""
+	pureSec = ""
+
+	if contentParts != nil && contentParts[1] != "" {
+		c := strings.Split(contentParts[1], ",")
+		d := strings.Split(c[0], " ")
+		da := strings.Split(d[0], "/")
+		ti := strings.Split(d[1], ":")
+
+		pureYear = da[0]
+		pureMonth = da[1]
+		pureDay = da[2]
+
+		pureHour = ti[0]
+		pureMin = ti[1]
+		pureSec = ti[2]
+
 	}
 
-	for i := 0; i < 4; i++ {
-
-		content2, _ := Fetch(DEF_URLS_PRICE_URL, DEF_PATHS_MARKET_STATUS_PATH, time.Second*0)
-		//content2, _ := Fetch(DEF_URLS_MARKET_STAT_URL, DEF_PATHS_MARKET_STATUS_PATH, time.Second*0)
-
-		contentParts := strings.Split(content2, "@")
-
-		if contentParts != nil && contentParts[1] != "" {
-			c := strings.Split(contentParts[1], ",")
-			d := strings.Split(c[0], " ")
-			da := strings.Split(d[0], "/")
-			ti := strings.Split(d[1], ":")
-
-			tStr := strings.Split(timeh.JalaliToDate("14"+da[0]+"-"+da[1]+"-"+da[2]+" "+ti[0]+":"+ti[1]+":"+ti[2], "Y-m-d-H-i-s"), "-")
-
-			t := time.Date(int(toInt(tStr[0])), time.Month(int(toInt(tStr[1]))), int(toInt(tStr[2])), int(toInt(tStr[3])), int(toInt(tStr[4])), 0, 0, time.UTC)
-
-			if tnow.Unix() > t.Add(-5*time.Minute).Unix() && tnow.Unix() < t.Add(5*time.Minute).Unix() {
-				return DEF_MARKET_STATUS_OPEN
-			}
-
-		}
-	}
-
-	return DEF_MARKET_STATUS_CLOSE
-}
-
-func isMarketUpdated() bool {
-
-	pt := ptime.Now()
-
-	if marketStatus == DEF_MARKET_STATUS_CLOSE {
-		if pt.Format("hh:mm") >= "08:00" && pt.Format("hh:mm") < "08:02" {
-			if pt.Format("hh:mm") >= "09:00" && pt.Format("hh:mm") < "09:02" {
-				if pt.Format("hh:mm") >= "10:00" && pt.Format("hh:mm") < "10:02" {
-					if time.Now().Sub(marketStatusLastCheck).Seconds() > 60 {
-						marketStatusLastCheck = time.Now()
-						return false
-					}
-				}
-			}
-		}
-	}
-
-	if marketStatus == DEF_MARKET_STATUS_OPEN {
-		if pt.Format("hh:mm") >= "12:30" && pt.Format("hh:mm") < "12:32" {
-			if pt.Format("hh:mm") >= "13:30" && pt.Format("hh:mm") < "13:32" {
-				if pt.Format("hh:mm") >= "11:30" && pt.Format("hh:mm") < "11:32" {
-					if time.Now().Sub(marketStatusLastCheck).Seconds() > 60 {
-						marketStatusLastCheck = time.Now()
-						return false
-					}
-				}
-			}
-		}
-	}
-
-	if marketStatus == DEF_MARKET_STATUS_UNKNOWN {
-		if time.Now().Sub(marketStatusLastCheck).Seconds() > 5*60 {
-			marketStatusLastCheck = time.Now()
-			return false
-		}
-	}
-
-	return true
+	return
 }
