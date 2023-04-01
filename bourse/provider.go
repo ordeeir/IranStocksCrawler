@@ -743,7 +743,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 
 	records := strings.Split(currentPeriodicAveragesContent, ";")
 
-	stockPeriodicAveragesList = make(map[string]*StockAverages)
+	stockPeriodicAveragesList = map[string]*StockAverages{}
 
 	var colsNumber = map[string]int{
 		"TSE_Code":                0,
@@ -773,6 +773,9 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 	}
 
 	cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
+
+	logrus.Debugf("stockPeriodicAveragesList with %v symbols stored into redis", len(stockPeriodicAveragesList))
+
 }
 
 func proviseIndiOrga365Days() {
@@ -827,6 +830,9 @@ func IsGeneralInfoEmpty() bool {
 }
 
 func IsPeriodicAveragesEmpty() bool {
+
+	logrus.Debugf("stockPeriodicAveragesList has %v rows", len(stockPeriodicAveragesList))
+
 	if len(stockPeriodicAveragesList) == 0 {
 		return true
 	}
