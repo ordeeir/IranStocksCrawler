@@ -95,7 +95,7 @@ func main() {
 
 		}
 
-		w.Header().Set("Content-Type", "html/text")
+		w.Header().Set("Content-Type", "text/html")
 
 		w.Write([]byte(str))
 	})
