@@ -7,6 +7,7 @@ import (
 	driver "IranStocksCrawler/system"
 	"IranStocksCrawler/system/config"
 	"os"
+	"strings"
 
 	"fmt"
 	"net/http"
@@ -61,11 +62,40 @@ func main() {
 		w.Write([]byte(resp))
 	})
 
-	router.HttpGet("/GetIndiOrga", func(w http.ResponseWriter, r *http.Request) {
-		//value := router.Var(r, "symbol")
+	router.HttpGet("/GetIndiOrga/{symbol}", func(w http.ResponseWriter, r *http.Request) {
+		sym := router.Var(r, "symbol")
 
-		resp := bourse.GetIndiOrga()
-		w.Write([]byte(resp))
+		list := bourse.GetIndiOrgaListSymbols()
+
+		str := "Gathered List : " + strings.Join(list, ",") + " <br><br><br>"
+
+		data, err := bourse.GetIndiOrga(sym)
+
+		if err == nil {
+			str += "Symbol: " + sym + "<br>"
+			str += "LastUpdate: " + data.LastUpdate + "<br>"
+			for i, j := range data.Days {
+				str += i + ": " + "<br>"
+				str += "---- AmountIndiBuy: " + j.AmountIndiBuy + "<br>"
+				str += "---- AmountIndiSell: " + j.AmountIndiSell + "<br>"
+				str += "---- AmountOrgaBuy: " + j.AmountOrgaBuy + "<br>"
+				str += "---- AmountOrgaSell: " + j.AmountOrgaSell + "<br>"
+				str += "---- QuantityIndiBuy: " + j.QuantityIndiBuy + "<br>"
+				str += "---- QuantityIndiSell: " + j.QuantityIndiSell + "<br>"
+				str += "---- QuantityOrgaBuy: " + j.QuantityOrgaBuy + "<br>"
+				str += "---- QuantityOrgaSell: " + j.QuantityOrgaSell + "<br>"
+				str += "---- VolumeIndiBuy: " + j.VolumeIndiBuy + "<br>"
+				str += "---- VolumeIndiSell: " + j.VolumeIndiSell + "<br>"
+				str += "---- VolumeOrgaBuy: " + j.VolumeOrgaBuy + "<br>"
+				str += "---- VolumeOrgaSell: " + j.VolumeOrgaSell + "<br>"
+
+			}
+		} else {
+			str += "Symbol not found "
+
+		}
+
+		w.Write([]byte(str))
 	})
 
 	router.HttpGet("/CrawlerStatus", func(w http.ResponseWriter, r *http.Request) {

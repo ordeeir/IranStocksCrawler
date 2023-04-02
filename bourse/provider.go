@@ -841,11 +841,30 @@ func GetTodaySeries(symbol string) string {
 	return fmt.Sprint(data)
 }
 
-func GetIndiOrga() string {
+func GetIndiOrgaListSymbols() []string {
 
-	data := stockIndiOrga365DaysList
+	var list = []string{}
 
-	return fmt.Sprint(data)
+	for i, _ := range stockIndiOrga365DaysList {
+		list = append(list, i)
+	}
+
+	return list
+}
+
+func GetIndiOrga(sym string) (StockIndiOrga365Days, error) {
+
+	var data = StockIndiOrga365Days{}
+
+	for i, j := range stockIndiOrga365DaysList {
+		if i == sym {
+			data = j
+			return data, nil
+
+		}
+	}
+
+	return data, errors.New("Not Found")
 }
 
 func ToString() string {
