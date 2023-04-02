@@ -11,6 +11,7 @@
         "options":{
             "redis":{
                 "network": "tcp",
+                "_host": "localhost",
                 "host": "91.107.130.30",
                 "port": "6379",
                 "username": "",

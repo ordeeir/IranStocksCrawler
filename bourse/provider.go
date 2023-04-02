@@ -251,23 +251,23 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 				for _, j := range rows {
 					row = strings.Split(j, ",")
 
+					sio := StockIndiOrga{}
+					sio.QuantityIndiBuy = row[1]
+					sio.QuantityOrgaBuy = row[2]
+					sio.QuantityIndiSell = row[3]
+					sio.QuantityOrgaSell = row[4]
+					sio.VolumeIndiBuy = row[5]
+					sio.VolumeOrgaBuy = row[6]
+					sio.VolumeIndiSell = row[7]
+					sio.VolumeOrgaSell = row[8]
+					sio.AmountIndiBuy = row[9]
+					sio.AmountOrgaBuy = row[10]
+					sio.AmountIndiSell = row[11]
+					sio.AmountOrgaSell = row[12]
+
+					symDays.Days[row[0]] = sio
 				}
 
-				indiOrga := StockIndiOrga{}
-				indiOrga.QuantityIndiBuy = row[1]
-				indiOrga.QuantityOrgaBuy = row[2]
-				indiOrga.QuantityIndiSell = row[3]
-				indiOrga.QuantityOrgaSell = row[4]
-				indiOrga.VolumeIndiBuy = row[5]
-				indiOrga.VolumeOrgaBuy = row[6]
-				indiOrga.VolumeIndiSell = row[7]
-				indiOrga.VolumeOrgaSell = row[8]
-				indiOrga.AmountIndiBuy = row[9]
-				indiOrga.AmountOrgaBuy = row[10]
-				indiOrga.AmountIndiSell = row[11]
-				indiOrga.AmountOrgaSell = row[12]
-
-				symDays.Days[rows[0]] = indiOrga
 				symDays.LastUpdate = todayMD()
 
 			}
@@ -514,13 +514,29 @@ func ConvertMapOfInterfaceToStockIndiOrga365Days(interf interface{}) map[string]
 		ii := inter1.(map[string]interface{})
 
 		_days := ii["Days"].(map[string]interface{})
+
 		lastUpdate := ii["LastUpdate"].(string)
 
 		days := map[string]StockIndiOrga{}
 
 		for _key, inter2 := range _days {
-			days[_key] = inter2.(StockIndiOrga)
+			row := inter2.(map[string]interface{})
 
+			sio := StockIndiOrga{}
+			sio.AmountIndiBuy = row["AmountIndiBuy"].(string)
+			sio.AmountIndiSell = row["AmountIndiSell"].(string)
+			sio.AmountOrgaBuy = row["AmountOrgaBuy"].(string)
+			sio.AmountOrgaSell = row["AmountOrgaSell"].(string)
+			sio.QuantityIndiBuy = row["QuantityIndiBuy"].(string)
+			sio.QuantityIndiSell = row["QuantityIndiSell"].(string)
+			sio.QuantityOrgaBuy = row["QuantityOrgaBuy"].(string)
+			sio.QuantityOrgaSell = row["QuantityOrgaSell"].(string)
+			sio.VolumeIndiBuy = row["VolumeIndiBuy"].(string)
+			sio.VolumeIndiSell = row["VolumeIndiSell"].(string)
+			sio.VolumeOrgaBuy = row["VolumeOrgaBuy"].(string)
+			sio.VolumeOrgaSell = row["VolumeOrgaSell"].(string)
+
+			days[_key] = sio
 		}
 
 		result[symbol] = StockIndiOrga365Days{
@@ -888,6 +904,7 @@ func ResetGatheredData(cacher *cacher.Cacher) {
 	stockPeriodicAveragesList = map[string]*StockAverages{}
 	stockAskBidTableList = map[string]*StockAskBidTable{}
 	stockTodaySeriesList = map[string]*StockTodaySeries{}
+	stockIndiOrga365DaysList = map[string]StockIndiOrga365Days{}
 
 	stockTseTOSymbolList = map[string]string{}
 
@@ -896,6 +913,7 @@ func ResetGatheredData(cacher *cacher.Cacher) {
 	cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
 	cacher.Put("stockIOList", stockIOList, 30*24*60*60)
 	cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
+	cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
 
 	logrus.Debug("storage is reset and stored in redis")
 
