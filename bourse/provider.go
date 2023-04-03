@@ -253,8 +253,16 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 				row := []string{}
 
-				for _, j := range rows {
-					row = strings.Split(j, ",")
+				j := 0
+
+				for _, jrow := range rows {
+
+					j++
+					if j > 200 {
+						break
+					}
+
+					row = strings.Split(jrow, ",")
 
 					sio := StockIndiOrga{}
 					sio.QuantityIndiBuy = row[1]
