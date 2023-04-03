@@ -46,7 +46,7 @@ func updateMarketDetails() error {
 	//	return nil
 	//}
 
-	agent := settings["curl-agent"]
+	agent := settings["curl-agent1"]
 	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_MARKET_STATUS_URL))
 	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
 

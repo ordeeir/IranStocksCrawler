@@ -29,7 +29,7 @@ func gatherPrices() error {
 		gatheringPrices = false
 	}()
 
-	agent := settings["curl-agent"]
+	agent := settings["curl-agent1"]
 	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_PRICE_URL))
 	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
 
@@ -75,7 +75,7 @@ func gatherIO() error {
 
 	logrus.Debugf("gatherIO tick. stockIOList has %v symbols", len(stockIOList))
 
-	agent := settings["curl-agent"]
+	agent := settings["curl-agent1"]
 	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_IO_URL))
 	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
 
@@ -116,7 +116,7 @@ func gatherPeriodicAverages() error {
 		return errors.New("Error in getting market periodic avg data (over atempt)")
 	}
 
-	agent := settings["curl-agent"]
+	agent := settings["curl-agent1"]
 	base64Url := base64.StdEncoding.EncodeToString([]byte(DEF_URLS_PERIODIC_AVERAGES_URL))
 	url := strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
 
@@ -151,7 +151,7 @@ func gatherIndiOrga365Days(tseCode string) (string, error) {
 
 	url := strings.ReplaceAll(DEF_URLS_INDIORGA_DAYS_DATA_URL, "{TSE_CODE}", tseCode)
 
-	agent := settings["curl-agent"]
+	agent := settings["curl-agent2"]
 	base64Url := base64.StdEncoding.EncodeToString([]byte(url))
 	url = strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
 
