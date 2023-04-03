@@ -10,6 +10,7 @@ import (
 	"unicode"
 
 	"github.com/antchfx/htmlquery"
+	"github.com/sirupsen/logrus"
 )
 
 const (
@@ -258,7 +259,11 @@ func SetConfigSettings(options config.ConfigList) {
 
 func GetMarketOpenCloseTime() (time.Time, time.Time) {
 
-	timeZone, _ := time.LoadLocation("Asia/Tehran")
+	timeZone, err := time.LoadLocation("Asia/Tehran")
+
+	if err != nil {
+		logrus.Error(err)
+	}
 
 	start := strings.Split(settings["start-time"], ":")
 	end := strings.Split(settings["end-time"], ":")

@@ -8,7 +8,9 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"math"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -207,16 +209,165 @@ func UpdatePeriodicAverages(cacher *cacher.Cacher) bool {
 	return false
 }
 
+func GetIndiOrga365DaysFromFilesystem(sym string) (string, string, error) {
+
+	item := stockPriceList[sym]
+
+	path := strings.ReplaceAll(DEF_PATHS_INDIORGA_DAYS_DATA_PATH, "{TSE_CODE}", item.TSE_Code)
+
+	content, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	fi, err2 := os.Stat(path)
+
+	if err2 != nil {
+		return "", "", err2
+	}
+
+	mtime := fi.ModTime()
+
+	tf := mtime.Format("01-02")
+
+	return string(content), tf, nil
+}
+
 func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
-	if nowDM() <= "06:00" {
+	if nowHM() <= "06:00" {
 
-		logrus.Debugf("nowDM: %v , UpdateIndiOrga365Days rejected", nowDM())
+		logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days rejected", nowHM())
 
 		return false
 	}
 
-	logrus.Debugf("nowDM: %v , UpdateIndiOrga365Days is gathering...", nowDM())
+	logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days is gathering...", nowHM())
+
+	if IsGeneralInfoEmpty() == false {
+
+		if len(stockIndiOrga365DaysList) == 0 {
+
+			for sym, _ := range stockPriceList {
+
+				content, time, err := GetIndiOrga365DaysFromFilesystem(sym)
+
+				if err != nil {
+					continue
+				}
+
+				symDays := generateIndiOrga365FromContent(sym, content)
+
+				symDays.LastUpdate = time
+
+				stockIndiOrga365DaysList[sym] = symDays
+			}
+		}
+
+		i := 0
+
+		for sym, item := range stockPriceList {
+
+			i++
+
+			symDays, ok := stockIndiOrga365DaysList[sym]
+
+			if ok {
+				if symDays.LastUpdate == todayMD() {
+					continue
+				}
+				// symDays = StockIndiOrga365Days{
+				// 	LastUpdate: "00-00",
+				// 	Days:       map[string]StockIndiOrga{},
+				// }
+			}
+
+			content, err := gatherIndiOrga365Days(item.TSE_Code)
+
+			if err != nil {
+				continue
+			}
+
+			symDays = generateIndiOrga365FromContent(sym, content)
+
+			stockIndiOrga365DaysList[sym] = symDays
+
+			if i >= 1 {
+
+				logrus.Debugf("trying to save stockIndiOrga365DaysList(size %d)...", getRealSizeOf(stockIndiOrga365DaysList))
+
+				err := cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
+
+				if err != nil {
+					logrus.Error(err)
+				} else {
+					logrus.Debugf("stockIndiOrga365DaysList with %v symbols gathered and stored into redis", len(stockIndiOrga365DaysList))
+				}
+
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func generateIndiOrga365FromContent(sym string, content string) StockIndiOrga365Days {
+
+	symDays := StockIndiOrga365Days{
+		LastUpdate: "00-00",
+		Days:       map[string]StockIndiOrga{},
+	}
+
+	rows := strings.Split(content, ";")
+
+	row := []string{}
+
+	j := 0
+
+	for _, jrow := range rows {
+
+		j++
+		if j > 310 {
+			break
+		}
+
+		row = strings.Split(jrow, ",")
+
+		sio := StockIndiOrga{}
+		sio.QuantityIndiBuy = row[1]
+		sio.QuantityOrgaBuy = row[2]
+		sio.QuantityIndiSell = row[3]
+		sio.QuantityOrgaSell = row[4]
+		sio.VolumeIndiBuy = row[5]
+		sio.VolumeOrgaBuy = row[6]
+		sio.VolumeIndiSell = row[7]
+		sio.VolumeOrgaSell = row[8]
+		sio.AmountIndiBuy = row[9]
+		sio.AmountOrgaBuy = row[10]
+		sio.AmountIndiSell = row[11]
+		sio.AmountOrgaSell = row[12]
+
+		symDays.Days[row[0]] = sio
+	}
+
+	symDays.LastUpdate = todayMD()
+
+	return symDays
+}
+
+/*
+func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
+
+	if nowHM() <= "06:00" {
+
+		logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days rejected", nowHM())
+
+		return false
+	}
+
+	logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days is gathering...", nowHM())
 
 	if IsGeneralInfoEmpty() == false {
 
@@ -308,6 +459,7 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 	return false
 }
+*/
 
 func providePriceDetails(cacher *cacher.Cacher) {
 
@@ -592,7 +744,7 @@ func ConvertMapOfInterfaceToStockIndiOrga365Days(interf interface{}) map[string]
 	return result
 }
 
-func nowDM() string {
+func nowHM() string {
 
 	tz := time.Now()
 
