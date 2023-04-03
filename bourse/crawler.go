@@ -68,14 +68,16 @@ func Fetch(url string, savePath string, cachedTime time.Duration) (result string
 
 	file, errCreate := os.Create(savePath)
 	if errCreate != nil {
-		return "", errors.New("error in storage file")
+		logrus.Error(errCreate)
+		logrus.Debug("error in creating storage file")
 	}
 	//helpers.CheckError(errCreate, "check if the path is right in windows and linux")
 	defer file.Close()
 
 	n, errWrite := file.Write(byteData)
 	if errWrite != nil {
-		return "", errors.New("error in storage file")
+		logrus.Error(errWrite)
+		logrus.Debug("error in writing storage file")
 	}
 	//helpers.CheckError(errWrite, "check if the file is writable and isnt locked")
 
