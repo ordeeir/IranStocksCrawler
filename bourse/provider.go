@@ -238,9 +238,9 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 	if nowHM() <= "06:00" {
 
-		//logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days rejected", nowHM())
+		logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days rejected", nowHM())
 
-		//return false
+		return false
 	}
 
 	logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days is gathering...", nowHM())
@@ -297,13 +297,7 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 				logrus.Debugf("trying to save stockIndiOrga365DaysList(size %d)...", getRealSizeOf(stockIndiOrga365DaysList))
 
-				err := cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
-
-				if err != nil {
-					logrus.Error(err)
-				} else {
-					logrus.Debugf("stockIndiOrga365DaysList with %v symbols gathered and stored into redis", len(stockIndiOrga365DaysList))
-				}
+				logrus.Debugf("stockIndiOrga365DaysList with %v symbols gathered and stored into filesystem", len(stockIndiOrga365DaysList))
 
 				return true
 			}
@@ -1139,7 +1133,6 @@ func ResetGatheredData(cacher *cacher.Cacher) {
 	stockPeriodicAveragesList = map[string]*StockAverages{}
 	stockAskBidTableList = map[string]*StockAskBidTable{}
 	stockTodaySeriesList = map[string]*StockTodaySeries{}
-	stockIndiOrga365DaysList = map[string]StockIndiOrga365Days{}
 
 	stockTseTOSymbolList = map[string]string{}
 
@@ -1148,18 +1141,8 @@ func ResetGatheredData(cacher *cacher.Cacher) {
 	cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
 	cacher.Put("stockIOList", stockIOList, 30*24*60*60)
 	cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
-	cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
 
 	logrus.Debug("storage is reset and stored in redis")
-
-	return
-}
-
-func ResetIndiOrga(cacher *cacher.Cacher) {
-
-	stockIndiOrga365DaysList = map[string]StockIndiOrga365Days{}
-
-	cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
 
 	return
 }
