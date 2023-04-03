@@ -102,7 +102,7 @@ func main() {
 
 	router.HttpGet("/DeleteIndiOrga", func(w http.ResponseWriter, r *http.Request) {
 
-		bourse.ResetIndiOrga(storage)
+		//bourse.ResetIndiOrga(storage)
 
 		s := "Deleted.\r\n"
 
