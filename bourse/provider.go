@@ -1013,3 +1013,12 @@ func ResetGatheredData(cacher *cacher.Cacher) {
 
 	return
 }
+
+func ResetIndiOrga(cacher *cacher.Cacher) {
+
+	stockIndiOrga365DaysList = map[string]StockIndiOrga365Days{}
+
+	cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
+
+	return
+}

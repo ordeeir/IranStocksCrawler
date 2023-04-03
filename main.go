@@ -100,6 +100,15 @@ func main() {
 		w.Write([]byte(str))
 	})
 
+	router.HttpGet("/DeleteIndiOrga", func(w http.ResponseWriter, r *http.Request) {
+
+		bourse.ResetIndiOrga(storage)
+
+		s := "Deleted.\r\n"
+
+		w.Write([]byte(s))
+	})
+
 	router.HttpGet("/CrawlerStatus", func(w http.ResponseWriter, r *http.Request) {
 
 		s := "Root Path: " + osh.GetRootPath() + "\r\n"
