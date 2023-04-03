@@ -4,6 +4,8 @@ import (
 	"IranStocksCrawler/helpers/stringsh"
 	"IranStocksCrawler/helpers/timeh"
 	"IranStocksCrawler/system/cacher"
+	"bytes"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"math"
@@ -11,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unsafe"
 
 	"github.com/sirupsen/logrus"
 )
@@ -290,9 +291,7 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 			if i >= 1 {
 
-				s := unsafe.Sizeof(stockIndiOrga365DaysList)
-
-				logrus.Debugf("trying to save stockIndiOrga365DaysList(size %d)...", s)
+				logrus.Debugf("trying to save stockIndiOrga365DaysList(size %d)...", getRealSizeOf(stockIndiOrga365DaysList))
 
 				err := cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
 
@@ -398,9 +397,7 @@ func providePriceDetails(cacher *cacher.Cacher) {
 
 	if len(stockPriceList) > 200 {
 
-		s := unsafe.Sizeof(stockPriceList)
-
-		logrus.Debugf("trying to save stockPriceList(size %d)...", s)
+		logrus.Debugf("trying to save stockPriceList(size %d)...", getRealSizeOf(stockPriceList))
 
 		err := cacher.Put("stockPriceList", stockPriceList, 30*24*60*60)
 
@@ -481,9 +478,7 @@ func provideAskBidTable(cacher *cacher.Cacher) {
 		}
 	}
 
-	s := unsafe.Sizeof(stockAskBidTableList)
-
-	logrus.Debugf("trying to save stockAskBidTableList(size %d)...", s)
+	logrus.Debugf("trying to save stockAskBidTableList(size %d)...", getRealSizeOf(stockAskBidTableList))
 
 	err := cacher.Put("stockAskBidTableList", stockAskBidTableList, 30*24*60*60)
 
@@ -721,9 +716,7 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 
 		logrus.Debugf("One row added to stockTodaySeriesList (last clocknumber = %v)", lastClockNumber)
 
-		s := unsafe.Sizeof(stockTodaySeriesList)
-
-		logrus.Debugf("trying to save stockTodaySeriesList(size %d)...", s)
+		logrus.Debugf("trying to save stockTodaySeriesList(size %d)...", getRealSizeOf(stockTodaySeriesList))
 
 		err := cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
 
@@ -809,9 +802,7 @@ func provideIODetails(cacher *cacher.Cacher) {
 
 	}
 
-	s := unsafe.Sizeof(stockIOList)
-
-	logrus.Debugf("trying to save stockIOList(size %d)...", s)
+	logrus.Debugf("trying to save stockIOList(size %d)...", getRealSizeOf(stockIOList))
 
 	err := cacher.Put("stockIOList", stockIOList, 30*24*60*60)
 
@@ -891,9 +882,7 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 
 	}
 
-	s := unsafe.Sizeof(stockPeriodicAveragesList)
-
-	logrus.Debugf("trying to save stockPeriodicAveragesList(size %d)...", s)
+	logrus.Debugf("trying to save stockPeriodicAveragesList(size %d)...", getRealSizeOf(stockPeriodicAveragesList))
 
 	err := cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
 
@@ -1021,4 +1010,12 @@ func ResetIndiOrga(cacher *cacher.Cacher) {
 	cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
 
 	return
+}
+
+func getRealSizeOf(v interface{}) int {
+	b := new(bytes.Buffer)
+	if err := gob.NewEncoder(b).Encode(v); err != nil {
+		return 0
+	}
+	return b.Len()
 }
