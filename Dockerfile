@@ -12,7 +12,7 @@ CMD ["/bin/sh" ,"-c" ,"go mod download"]
 
 RUN go build -o ./stockscrawler
 
-#EXPOSE 1212
+#EXPOSE 1212 
 
 #CMD tail -f /dev/null
 
