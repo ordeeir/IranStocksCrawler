@@ -208,8 +208,13 @@ func UpdatePeriodicAverages(cacher *cacher.Cacher) bool {
 func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 	if nowDM() <= "06:00" {
+
+		logrus.Debugf("nowDM: %v , UpdateIndiOrga365Days rejected", nowDM())
+
 		return false
 	}
+
+	logrus.Debugf("nowDM: %v , UpdateIndiOrga365Days is gathering...", nowDM())
 
 	if IsGeneralInfoEmpty() == false {
 
