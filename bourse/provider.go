@@ -238,9 +238,9 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 	if nowHM() <= "06:00" {
 
-		logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days rejected", nowHM())
+		//logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days rejected", nowHM())
 
-		return false
+		//return false
 	}
 
 	logrus.Debugf("nowHM: %v , UpdateIndiOrga365Days is gathering...", nowHM())
