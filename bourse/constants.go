@@ -13,7 +13,7 @@ var (
 	DEF_PATHS_IO_PATH                 = osh.GetRootPath() + "/files/bourse/realtime/indi_orga_details.txt"
 	DEF_PATHS_MARKET_STATUS_PATH      = osh.GetRootPath() + "/files/bourse/realtime/market_status.txt"
 	DEF_PATHS_PERIODIC_AVERAGES_PATH  = osh.GetRootPath() + "/files/bourse/realtime/periodic_avgs.txt"
-	DEF_PATHS_INDIORGA_DAYS_DATA_PATH = osh.GetRootPath() + "/files/bourse/realtime/indi_orga_days.txt"
+	DEF_PATHS_INDIORGA_DAYS_DATA_PATH = osh.GetRootPath() + "/files/bourse/indi_orga_days/{TSE_CODE}.txt"
 
 	DEF_MARKET_STATUS_OPEN    MarketStatusType = 1
 	DEF_MARKET_STATUS_CLOSE   MarketStatusType = 0

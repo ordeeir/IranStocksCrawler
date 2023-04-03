@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unsafe"
 
 	"github.com/sirupsen/logrus"
 )
@@ -289,7 +290,9 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 			if i >= 1 {
 
-				logrus.Debugf("trying saveing stockIndiOrga365DaysList...")
+				s := unsafe.Sizeof(stockIndiOrga365DaysList)
+
+				logrus.Debugf("trying to save stockIndiOrga365DaysList(size %d)...", s)
 
 				err := cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
 
@@ -297,7 +300,6 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 					logrus.Error(err)
 				} else {
 					logrus.Debugf("stockIndiOrga365DaysList with %v symbols gathered and stored into redis", len(stockIndiOrga365DaysList))
-
 				}
 
 				return true
@@ -396,6 +398,10 @@ func providePriceDetails(cacher *cacher.Cacher) {
 
 	if len(stockPriceList) > 200 {
 
+		s := unsafe.Sizeof(stockPriceList)
+
+		logrus.Debugf("trying to save stockPriceList(size %d)...", s)
+
 		err := cacher.Put("stockPriceList", stockPriceList, 30*24*60*60)
 
 		if err != nil {
@@ -474,6 +480,10 @@ func provideAskBidTable(cacher *cacher.Cacher) {
 
 		}
 	}
+
+	s := unsafe.Sizeof(stockAskBidTableList)
+
+	logrus.Debugf("trying to save stockAskBidTableList(size %d)...", s)
 
 	err := cacher.Put("stockAskBidTableList", stockAskBidTableList, 30*24*60*60)
 
@@ -711,14 +721,19 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 
 		logrus.Debugf("One row added to stockTodaySeriesList (last clocknumber = %v)", lastClockNumber)
 
+		s := unsafe.Sizeof(stockTodaySeriesList)
+
+		logrus.Debugf("trying to save stockTodaySeriesList(size %d)...", s)
+
 		err := cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
-		cacher.Put("lastClockNumber", lastClockNumber, 30*24*60*60)
 
 		if err != nil {
 			logrus.Error(err)
 		} else {
 			logrus.Debugf("stockTodaySeriesList with %v symbols stored to stockTodaySeriesList in redis (last clocknumber = %v)", len(stockTodaySeriesList), lastClockNumber)
 		}
+
+		cacher.Put("lastClockNumber", lastClockNumber, 30*24*60*60)
 
 	}
 
@@ -793,6 +808,10 @@ func provideIODetails(cacher *cacher.Cacher) {
 		stockIOList[sir.Symbol] = sir
 
 	}
+
+	s := unsafe.Sizeof(stockIOList)
+
+	logrus.Debugf("trying to save stockIOList(size %d)...", s)
 
 	err := cacher.Put("stockIOList", stockIOList, 30*24*60*60)
 
@@ -871,6 +890,10 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 		stockPeriodicAveragesList[sar.Symbol] = sar
 
 	}
+
+	s := unsafe.Sizeof(stockPeriodicAveragesList)
+
+	logrus.Debugf("trying to save stockPeriodicAveragesList(size %d)...", s)
 
 	err := cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
 

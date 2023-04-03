@@ -155,7 +155,9 @@ func gatherIndiOrga365Days(tseCode string) (string, error) {
 	base64Url := base64.StdEncoding.EncodeToString([]byte(url))
 	url = strings.ReplaceAll(agent, "{BASE64_URL}", base64Url)
 
-	content, errFetch := Fetch(url, DEF_PATHS_INDIORGA_DAYS_DATA_PATH, 0)
+	path := strings.ReplaceAll(DEF_PATHS_INDIORGA_DAYS_DATA_PATH, "{TSE_CODE}", tseCode)
+
+	content, errFetch := Fetch(url, path, 0)
 	if errFetch != nil {
 		consecutiveAtempts["FailedUpdateIndiOrga365Days"]++
 		return "", errors.New("Error in getting indi orga 365 days data (fetch)")
