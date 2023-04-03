@@ -289,6 +289,8 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 			if i >= 1 {
 
+				logrus.Debugf("trying saveing stockIndiOrga365DaysList...")
+
 				err := cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
 
 				if err != nil {
