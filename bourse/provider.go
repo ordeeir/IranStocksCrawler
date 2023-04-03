@@ -276,7 +276,14 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 			if i >= 1 {
 
-				cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
+				err := cacher.Put("stockIndiOrga365DaysList", stockIndiOrga365DaysList, 30*24*60*60)
+
+				if err != nil {
+					logrus.Error(err)
+				} else {
+					logrus.Debugf("stockIndiOrga365DaysList with %v symbols gathered and stored into redis", len(stockIndiOrga365DaysList))
+
+				}
 
 				return true
 			}
@@ -374,11 +381,23 @@ func providePriceDetails(cacher *cacher.Cacher) {
 
 	if len(stockPriceList) > 200 {
 
-		cacher.Put("stockPriceList", stockPriceList, 30*24*60*60)
-		cacher.Put("lastTimeStorage", todayYMDHM(), 30*24*60*60)
+		err := cacher.Put("stockPriceList", stockPriceList, 30*24*60*60)
 
-		logrus.Debugf("stockPriceList with %v symbols gathered and stored into redis", len(stockPriceList))
-		logrus.Debugf("stockTseTOSymbolList with %v symbols stored into redis", len(stockTseTOSymbolList))
+		if err != nil {
+			logrus.Error(err)
+		} else {
+			logrus.Debugf("stockPriceList with %v symbols gathered and stored into redis", len(stockPriceList))
+			logrus.Debugf("stockTseTOSymbolList with %v symbols stored into redis", len(stockTseTOSymbolList))
+		}
+
+		err2 := cacher.Put("lastTimeStorage", todayYMDHM(), 30*24*60*60)
+
+		if err2 != nil {
+			logrus.Error(err2)
+		} else {
+			logrus.Debugf("lastTimeStorage and stored into redis")
+		}
+
 	}
 }
 
@@ -441,9 +460,13 @@ func provideAskBidTable(cacher *cacher.Cacher) {
 		}
 	}
 
-	cacher.Put("stockAskBidTableList", stockAskBidTableList, 30*24*60*60)
+	err := cacher.Put("stockAskBidTableList", stockAskBidTableList, 30*24*60*60)
 
-	logrus.Debugf("stockAskBidTableList with %v symbols gathered and stored into redis", len(stockAskBidTableList))
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		logrus.Debugf("stockAskBidTableList with %v symbols gathered and stored into redis", len(stockAskBidTableList))
+	}
 
 }
 
@@ -671,10 +694,14 @@ func provideTodaySeries(cacher *cacher.Cacher) {
 
 		logrus.Debugf("One row added to stockTodaySeriesList (last clocknumber = %v)", lastClockNumber)
 
+		err := cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
 		cacher.Put("lastClockNumber", lastClockNumber, 30*24*60*60)
-		cacher.Put("stockTodaySeriesList", stockTodaySeriesList, 30*24*60*60)
 
-		logrus.Debugf("stockTodaySeriesList with %v symbols stored to stockTodaySeriesList in redis (last clocknumber = %v)", len(stockTodaySeriesList), lastClockNumber)
+		if err != nil {
+			logrus.Error(err)
+		} else {
+			logrus.Debugf("stockTodaySeriesList with %v symbols stored to stockTodaySeriesList in redis (last clocknumber = %v)", len(stockTodaySeriesList), lastClockNumber)
+		}
 
 	}
 
@@ -750,9 +777,13 @@ func provideIODetails(cacher *cacher.Cacher) {
 
 	}
 
-	cacher.Put("stockIOList", stockIOList, 30*24*60*60)
+	err := cacher.Put("stockIOList", stockIOList, 30*24*60*60)
 
-	logrus.Debugf("stockIOList with %v symbols stored into redis", len(stockIOList))
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		logrus.Debugf("stockIOList with %v symbols stored into redis", len(stockIOList))
+	}
 
 }
 
@@ -824,9 +855,13 @@ func providePeriodicAverages(cacher *cacher.Cacher) {
 
 	}
 
-	cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
+	err := cacher.Put("stockPeriodicAveragesList", stockPeriodicAveragesList, 30*24*60*60)
 
-	logrus.Debugf("stockPeriodicAveragesList with %v symbols stored into redis", len(stockPeriodicAveragesList))
+	if err != nil {
+		logrus.Error(err)
+	} else {
+		logrus.Debugf("stockPeriodicAveragesList with %v symbols stored into redis", len(stockPeriodicAveragesList))
+	}
 
 }
 
