@@ -5,8 +5,7 @@ services:
     ports:
      - "1212:1212"
     volumes:
-      - files:/IranStocksCrawler/files
+      - "./app-files:/IranStocksCrawler/files"
     environment:
       - LOG_LEVEL=debug
-volumes:   
-  files:     
+   
