@@ -578,10 +578,12 @@ func ConvertMapOfInterfaceToStockIndiOrga365Days(interf interface{}) map[string]
 }
 
 func nowDM() string {
+
+	tz := time.Now()
+
 	timeZone, _ := time.LoadLocation("Asia/Tehran")
 
-	z := time.Now()
-	t := time.Date(z.Year(), z.Month(), z.Day(), z.Hour(), z.Minute(), z.Second(), 0, timeZone).UTC()
+	t := tz.In(timeZone)
 
 	return t.Format("15:04")
 }
