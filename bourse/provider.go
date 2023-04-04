@@ -259,6 +259,10 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 				logrus.Debugf("GetIndiOrga365DaysFromFilesystem reterned. symbol: %v , content length: %v ", sym, len(content))
 
+				if len(content) == 0 {
+					continue
+				}
+
 				symDays := generateIndiOrga365FromContent(sym, content)
 
 				symDays.LastUpdate = time
