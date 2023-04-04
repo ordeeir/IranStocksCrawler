@@ -38,6 +38,10 @@ func main() {
 
 	bourse.SetConfigSettings(conf.Settings)
 
+	ss := bourse.GetTime()
+	_ = ss
+
+	//storage.CheckConnectivity()
 	_ = storage.Put("z2", "22", 24*60*60)
 	z := storage.Get("z2")
 	if z != nil && z.(string) == "22" {

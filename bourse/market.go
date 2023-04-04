@@ -4,7 +4,9 @@ import (
 	"IranStocksCrawler/helpers/stringsh"
 	"IranStocksCrawler/system/config"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 	"unicode"
@@ -18,6 +20,10 @@ const (
 )
 
 var marketStatus MarketStatusType = DEF_MARKET_STATUS_UNKNOWN
+
+var calibrationPointDiffTimeH int
+var calibrationPointDiffTimeM int
+
 var marketTime string
 var marketDate string
 var marketStatusLastUpdate time.Time
@@ -53,7 +59,7 @@ func updateMarketDetails() error {
 
 	content, errFetch := Fetch(url, DEF_PATHS_MARKET_STATUS_PATH, 0)
 
-	if errFetch != nil {
+	if content == "" && errFetch != nil {
 		// byteData, errFetch2 := os.ReadFile("C:/Go_Projects/IranStocksCrawler/files/pricedata2022-10-01-11-36-57.txt")
 		// content2 := string(byteData)
 		// //content2, errFetch2 := Fetch(DEF_URLS_PRICE_URL, DEF_PATHS_MARKET_STATUS_PATH, time.Second*5)
@@ -123,9 +129,23 @@ func updateMarketDetails() error {
 	if parts[1] == "" {
 		parts[1] = "00:00"
 	}
-	timeParts := strings.Split(parts[1], ":")
+	//timeParts := strings.Split(parts[1], ":")
 
-	setTime(timeParts[0], timeParts[1])
+	/////////////////////////////////////////////////////
+
+	content, errFetch = Fetch(DEF_URLS_PRECISE_TIME_URL, "", 0)
+
+	if content == "" && errFetch != nil {
+		return errFetch
+	}
+
+	var mtime map[string]interface{}
+	json.Unmarshal([]byte(content), &mtime)
+
+	h := fmt.Sprintf("%02d", int(mtime["hour"].(float64)))
+	m := fmt.Sprintf("%02d", int(mtime["minute"].(float64)))
+
+	setTime(h, m)
 
 	// gathering data is done successfully
 	consecutiveAtempts["FailedUpdateMarketDetails"] = 0
@@ -208,11 +228,33 @@ func GetDate() string {
 
 func setTime(hour string, minute string) {
 	marketTime = hour + ":" + minute
+
+	calibrationPointMarketTimeH := int(toInt(hour))
+	calibrationPointMarketTimeM := int(toInt(minute))
+
+	tz := time.Now()
+	timeZone, _ := time.LoadLocation("Asia/Tehran")
+	t := tz.In(timeZone)
+
+	calibrationPointServerTimeH := int(toInt(t.Format("15")))
+	calibrationPointServerTimeM := int(toInt(t.Format("04")))
+
+	calibrationPointDiffTimeH = calibrationPointMarketTimeH - calibrationPointServerTimeH
+	calibrationPointDiffTimeM = calibrationPointMarketTimeM - calibrationPointServerTimeM
+
 }
 
 func GetTime() string {
 	updateMarketDetails()
-	return marketTime
+
+	tz := time.Now()
+	timeZone, _ := time.LoadLocation("Asia/Tehran")
+	t := tz.In(timeZone)
+
+	serverTimeH := int(toInt(t.Format("15"))) + calibrationPointDiffTimeH
+	serverTimeM := int(toInt(t.Format("04"))) + calibrationPointDiffTimeM
+
+	return fmt.Sprintf("%02d:%02d", serverTimeH, serverTimeM)
 }
 
 func IsOpenTime() bool {

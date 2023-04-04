@@ -257,6 +257,8 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 					continue
 				}
 
+				logrus.Debugf("GetIndiOrga365DaysFromFilesystem reterned. symbol: %v , content length: %v ", sym, len(content))
+
 				symDays := generateIndiOrga365FromContent(sym, content)
 
 				symDays.LastUpdate = time
@@ -1112,11 +1114,15 @@ func IsGeneralInfoEmpty() bool {
 
 func IsPeriodicAveragesEmpty() bool {
 
-	logrus.Debugf("stockPeriodicAveragesList has %v rows", len(stockPeriodicAveragesList))
-
 	if len(stockPeriodicAveragesList) == 0 {
+
+		logrus.Debugf("stockPeriodicAveragesList is not empty, it has %v rows", len(stockPeriodicAveragesList))
+
 		return true
 	}
+
+	logrus.Debugf("stockPeriodicAveragesList is empty, it has %v rows", len(stockPeriodicAveragesList))
+
 	return false
 }
 
