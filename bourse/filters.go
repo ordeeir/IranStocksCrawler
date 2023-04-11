@@ -90,6 +90,10 @@ func InitFilters() {
 	// doubtful volume
 	addFilter("doubtful-volume", func(symbol string, params FilterParams, days []string) bool {
 
+		if params.IndiOrga365DaysList == nil {
+			return false
+		}
+
 		todayV := params.GeneralInfo.Volume
 
 		sumVolume := int64(0)
@@ -122,6 +126,10 @@ func InitFilters() {
 
 	// saraneh kharid ascending
 	addFilter("saraneh-kharid-ascending", func(symbol string, params FilterParams, days []string) bool {
+
+		if params.IndiOrga365DaysList == nil {
+			return false
+		}
 
 		//todayV := params.GeneralInfo.Volume
 		todaySaranehBuy := params.StockIOInfo.IndiBuySaraneh
