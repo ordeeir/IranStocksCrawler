@@ -59,6 +59,16 @@ func main() {
 		w.Write([]byte(resp))
 	})
 
+	router.HttpGet("/GetFilter/{filter}", func(w http.ResponseWriter, r *http.Request) {
+		value := router.Var(r, "filter")
+
+		resp := bourse.GetFilterResult(value)
+
+		str := strings.Join(resp, "<br>")
+
+		w.Write([]byte(str))
+	})
+
 	router.HttpGet("/GetTodaySeries/{symbol}", func(w http.ResponseWriter, r *http.Request) {
 		value := router.Var(r, "symbol")
 

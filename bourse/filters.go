@@ -196,3 +196,8 @@ func createDays() []string {
 
 	return days
 }
+
+func GetFilterResult(filter string) []string {
+	result := filterResult[filter]
+	return result
+}
