@@ -98,7 +98,10 @@ func InitFilters() {
 		for _, j := range days {
 			i++
 
-			indiorga := params.IndiOrga365DaysList.Days[j]
+			indiorga, exist := params.IndiOrga365DaysList.Days[j]
+			if !exist {
+				continue
+			}
 
 			vib, _ := strconv.ParseInt(indiorga.VolumeIndiBuy, 10, 64)
 			vob, _ := strconv.ParseInt(indiorga.VolumeOrgaBuy, 10, 64)
@@ -132,8 +135,10 @@ func InitFilters() {
 		for _, j := range days {
 			i++
 
-			indiorga := params.IndiOrga365DaysList.Days[j]
-
+			indiorga, exist := params.IndiOrga365DaysList.Days[j]
+			if !exist {
+				continue
+			}
 			//vib, _ := strconv.ParseInt(indiorga.VolumeIndiBuy, 10, 64)
 			//vob, _ := strconv.ParseInt(indiorga.VolumeOrgaBuy, 10, 64)
 
