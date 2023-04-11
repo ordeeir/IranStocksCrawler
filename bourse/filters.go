@@ -3,9 +3,18 @@ package bourse
 import (
 	"IranStocksCrawler/helpers/arraysh"
 	"IranStocksCrawler/system/cacher"
+	"strconv"
+	"time"
 )
 
-type filterFunc func(symbol string, spr *StockPrice, ts *StockTodaySeries) bool
+type FilterParams struct {
+	GeneralInfo         *StockPrice
+	StockIOInfo         *StockIO
+	StockTodaySeries    *StockTodaySeries
+	IndiOrga365DaysList *StockIndiOrga365Days
+}
+
+type filterFunc func(symbol string, params FilterParams, lastOpenDays []string) bool
 
 var filters map[string]*filterFunc = make(map[string]*filterFunc, 0)
 
@@ -13,12 +22,18 @@ var filterResult map[string][]string = make(map[string][]string, 0)
 
 func ApplyFilters(cacher cacher.ICacherEngine) bool {
 
-	for sym := range stockPriceList {
-		spr := stockPriceList[sym]
-		//sir := stockIORowList[sym]
-		series := stockTodaySeriesList[sym]
+	days := createDays()
 
-		doFilters(sym, spr, series)
+	for sym := range stockPriceList {
+
+		params := FilterParams{
+			GeneralInfo:         stockPriceList[sym],
+			StockIOInfo:         stockIOList[sym],
+			StockTodaySeries:    stockTodaySeriesList[sym],
+			IndiOrga365DaysList: stockIndiOrga365DaysList[sym],
+		}
+
+		doFilters(sym, params, days)
 	}
 
 	// store result of each filter
@@ -29,13 +44,13 @@ func ApplyFilters(cacher cacher.ICacherEngine) bool {
 	return true
 }
 
-func doFilters(symbol string, spr *StockPrice, ts *StockTodaySeries) {
+func doFilters(symbol string, params FilterParams, days []string) {
 
 	for name, f := range filters {
 
 		ff := *f
 
-		ok := ff(symbol, spr, ts)
+		ok := ff(symbol, params, days)
 
 		if ok == true {
 			filterResult[name] = append(filterResult[name], symbol)
@@ -56,7 +71,7 @@ func InitFilters() {
 	}
 
 	// shakhes-saz-ha
-	addFilter("shakhes-saz-ha", func(symbol string, spr *StockPrice, series *StockTodaySeries) bool {
+	addFilter("shakhes-saz-ha", func(symbol string, params FilterParams, days []string) bool {
 
 		shakhesSymbols := []string{
 			"شپنا", "شبندر", "شتران", "شستا", "فارس", "فولاد",
@@ -73,15 +88,98 @@ func InitFilters() {
 	})
 
 	// doubtful volume
-	addFilter("doubtful-volume", func(symbol string, spr *StockPrice, series *StockTodaySeries) bool {
+	addFilter("doubtful-volume", func(symbol string, params FilterParams, days []string) bool {
+
+		todayV := params.GeneralInfo.Volume
+
+		sumVolume := int64(0)
+
+		i := 0
+		for _, j := range days {
+			i++
+
+			indiorga := params.IndiOrga365DaysList.Days[j]
+
+			vib, _ := strconv.ParseInt(indiorga.VolumeIndiBuy, 10, 64)
+			vob, _ := strconv.ParseInt(indiorga.VolumeOrgaBuy, 10, 64)
+
+			sumVolume += (vib + vob)
+
+			if i >= 7 {
+				break
+			}
+		}
+
+		if todayV > 2*sumVolume/int64(len(days)) {
+			return true
+		}
 
 		return false
 	})
 
-	// saraneh kharid so'udi
-	addFilter("saraneh-kharid-so'udi", func(symbol string, spr *StockPrice, series *StockTodaySeries) bool {
+	// saraneh kharid ascending
+	addFilter("saraneh-kharid-ascending", func(symbol string, params FilterParams, days []string) bool {
+
+		//todayV := params.GeneralInfo.Volume
+		todaySaranehBuy := params.StockIOInfo.IndiBuySaraneh
+		//todayV := params.GeneralInfo.Volume
+
+		//sumVolume := int64(0)
+
+		maxSaranehBuy := int64(0)
+
+		i := 0
+		for _, j := range days {
+			i++
+
+			indiorga := params.IndiOrga365DaysList.Days[j]
+
+			//vib, _ := strconv.ParseInt(indiorga.VolumeIndiBuy, 10, 64)
+			//vob, _ := strconv.ParseInt(indiorga.VolumeOrgaBuy, 10, 64)
+
+			aib, _ := strconv.ParseInt(indiorga.AmountIndiBuy, 10, 64)
+			qib, _ := strconv.ParseInt(indiorga.QuantityIndiBuy, 10, 64)
+
+			//ais, _ := strconv.ParseInt(indiorga.AmountIndiSell, 10, 64)
+			//qis, _ := strconv.ParseInt(indiorga.QuantityIndiSell, 10, 64)
+
+			saranehBuy := (aib / (qib * 10000000))
+			//saranehSell := (ais / qis)
+
+			//buyPower := saranehBuy / saranehSell
+			if saranehBuy > maxSaranehBuy {
+				maxSaranehBuy = saranehBuy
+			}
+
+			if i >= 7 {
+				break
+			}
+		}
+
+		if todaySaranehBuy > (1.5)*float64(maxSaranehBuy) {
+			return true
+		}
 
 		return false
 	})
 
+}
+
+func createDays() []string {
+
+	days := []string{}
+
+	days = append(days, time.Now().Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(1*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(2*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(3*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(4*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(5*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(6*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(7*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(8*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(9*24*60*60).Format(DEF_DATE_PATTERN))
+	days = append(days, time.Now().Truncate(10*24*60*60).Format(DEF_DATE_PATTERN))
+
+	return days
 }

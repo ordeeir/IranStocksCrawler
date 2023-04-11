@@ -31,7 +31,7 @@ var stockPeriodicAveragesList map[string]*StockAverages
 var stockAskBidTableList map[string]*StockAskBidTable
 var stockTodaySeriesList map[string]*StockTodaySeries = map[string]*StockTodaySeries{}
 
-var stockIndiOrga365DaysList map[string]StockIndiOrga365Days = map[string]StockIndiOrga365Days{}
+var stockIndiOrga365DaysList map[string]*StockIndiOrga365Days = map[string]*StockIndiOrga365Days{}
 var stockTseTOSymbolList map[string]string
 
 var lastClockNumber int64 = -1
@@ -249,7 +249,7 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 		if len(stockIndiOrga365DaysList) == 0 {
 
-			for sym, _ := range stockPriceList {
+			for sym := range stockPriceList {
 
 				content, time, err := GetIndiOrga365DaysFromFilesystem(sym)
 
@@ -259,7 +259,7 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 
 				logrus.Debugf("GetIndiOrga365DaysFromFilesystem reterned. symbol: %v , content length: %v ", sym, len(content))
 
-				symDays := StockIndiOrga365Days{}
+				symDays := &StockIndiOrga365Days{}
 
 				if len(content) > 0 {
 					symDays = generateIndiOrga365FromContent(sym, content)
@@ -315,9 +315,9 @@ func UpdateIndiOrga365Days(cacher *cacher.Cacher) bool {
 	return false
 }
 
-func generateIndiOrga365FromContent(sym string, content string) StockIndiOrga365Days {
+func generateIndiOrga365FromContent(sym string, content string) *StockIndiOrga365Days {
 
-	symDays := StockIndiOrga365Days{
+	symDays := &StockIndiOrga365Days{
 		LastUpdate: "00-00",
 		Days:       map[string]StockIndiOrga{},
 	}
@@ -1063,16 +1063,16 @@ func GetIndiOrgaListSymbols() []string {
 
 	var list = []string{}
 
-	for i, _ := range stockIndiOrga365DaysList {
+	for i := range stockIndiOrga365DaysList {
 		list = append(list, i)
 	}
 
 	return list
 }
 
-func GetIndiOrga(sym string) (StockIndiOrga365Days, error) {
+func GetIndiOrga(sym string) (*StockIndiOrga365Days, error) {
 
-	var data = StockIndiOrga365Days{}
+	var data = &StockIndiOrga365Days{}
 
 	for i, j := range stockIndiOrga365DaysList {
 		if i == sym {
